@@ -26,17 +26,133 @@
 | `flyway` | `org.flywaydb:flyway-core` (compile) — no Liberty feature needed, call programmatically or via CDI `@Startup` |
 | `liquibase` | `org.liquibase:liquibase-core` (compile) — call programmatically |
 
-### JDBC Driver placement
+### Third-party Library Placement
 
-JDBC drivers can be placed:
+When a driver or client library must be visible to the Liberty runtime (not just bundled inside the WAR), copy its JARs into a dedicated subdirectory under the server's `lib/` folder and declare a matching `<library>` element in `server.xml`. Each product gets its own subdirectory so libraries remain isolated and easy to update independently.
 
-1. **Inside the WAR** (`<scope>runtime</scope>` in Maven): simplest, driver is bundled with the app
-2. **Shared library** (recommended for production): place the JAR in `${wlp.user.dir}/shared/resources/` and reference via `<library>` in `server.xml`
+#### Directory convention
+
+```
+<server_name>/
+└── lib/
+    ├── db2/          ← IBM DB2 JDBC driver JARs
+    ├── mq/           ← IBM MQ client JARs
+    ├── oracle/       ← Oracle JDBC driver JARs
+    ├── postgresql/   ← PostgreSQL JDBC driver JARs
+    └── <product>/    ← any other third-party library
+```
+
+The Liberty variable `${server.config.dir}` resolves to the server's root directory (e.g. `wlp/usr/servers/<server_name>/`). Use it to keep paths portable across installations.
+
+#### When to use each placement option
+
+| Option | How | When to use |
+|---|---|---|
+| **Inside the WAR** | `<scope>runtime</scope>` (Maven) / `runtimeOnly` (Gradle) | Simple apps, no Liberty-managed data sources or connection factories |
+| **Server lib directory** | Copy JARs to `lib/<product>/`, declare `<library>` in `server.xml` | Recommended for JDBC drivers, MQ clients, and any library referenced by a Liberty `<dataSource>`, `<connectionFactory>`, or `<jmsConnectionFactory>` |
+| **Shared resources** | `${shared.resource.dir}/<product>/` | Same JARs shared across multiple servers in one Liberty installation |
+
+> **Rule**: If `server.xml` has a `<dataSource>`, `<connectionFactory>`, or `<jmsConnectionFactory>` that needs a driver, the JARs **must** be in a `<library>` — Liberty cannot see inside the WAR for those elements.
+
+---
+
+### IBM DB2
+
+Copy `db2jcc4.jar` (and `db2jcc_license_cu.jar` if required) to `<server_name>/lib/db2/`.
 
 ```xml
-<!-- server.xml — shared library approach -->
+<!-- server.xml -->
+<library id="DB2Lib">
+    <fileset dir="${server.config.dir}/lib/db2" includes="*.jar"/>
+</library>
+
+<dataSource id="DefaultDataSource" jndiName="jdbc/myapp">
+    <jdbcDriver libraryRef="DB2Lib"/>
+    <properties.db2.jcc serverName="localhost" portNumber="50000"
+                        databaseName="myapp" user="db2user" password="db2pass"/>
+</dataSource>
+```
+
+Maven dependency (compile/test only — do **not** bundle in the WAR when using the lib directory):
+```xml
+<dependency>
+    <groupId>com.ibm.db2</groupId>
+    <artifactId>jcc</artifactId>
+    <version>11.5.9.0</version>
+    <scope>provided</scope>  <!-- provided = on Liberty classpath via <library>, not in WAR -->
+</dependency>
+```
+
+---
+
+### IBM MQ
+
+Copy `com.ibm.mq.allclient.jar` (and `com.ibm.mq.jakarta.client.jar` for Jakarta EE) to `<server_name>/lib/mq/`.
+
+```xml
+<!-- server.xml -->
+<library id="MQLib">
+    <fileset dir="${server.config.dir}/lib/mq" includes="*.jar"/>
+</library>
+
+<jmsConnectionFactory id="MQConnectionFactory" jndiName="jms/MQFactory">
+    <properties.wmqJms
+        hostName="localhost"
+        port="1414"
+        channel="DEV.APP.SVRCONN"
+        queueManager="QM1"
+        transportType="CLIENT"/>
+    <connectionManager maxPoolSize="10"/>
+</jmsConnectionFactory>
+```
+
+Add the `messaging-3.1` and `wmqJmsClient-3.0` Liberty features:
+```xml
+<featureManager>
+    <feature>messaging-3.1</feature>
+    <feature>wmqJmsClient-3.0</feature>
+</featureManager>
+```
+
+Maven dependency (provided scope — JARs are in `lib/mq/`, not in the WAR):
+```xml
+<dependency>
+    <groupId>com.ibm.mq</groupId>
+    <artifactId>com.ibm.mq.allclient</artifactId>
+    <version>9.4.1.0</version>
+    <scope>provided</scope>
+</dependency>
+```
+
+---
+
+### Oracle JDBC
+
+Copy `ojdbc11.jar` to `<server_name>/lib/oracle/`.
+
+```xml
+<!-- server.xml -->
+<library id="OracleLib">
+    <fileset dir="${server.config.dir}/lib/oracle" includes="*.jar"/>
+</library>
+
+<dataSource id="DefaultDataSource" jndiName="jdbc/myapp">
+    <jdbcDriver libraryRef="OracleLib"/>
+    <properties.oracle URL="jdbc:oracle:thin:@localhost:1521:ORCL"
+                       user="appuser" password="apppass"/>
+</dataSource>
+```
+
+---
+
+### PostgreSQL JDBC
+
+Copy `postgresql-{version}.jar` to `<server_name>/lib/postgresql/`.
+
+```xml
+<!-- server.xml -->
 <library id="PostgreSQLLib">
-    <fileset dir="${shared.resource.dir}/postgresql" includes="*.jar"/>
+    <fileset dir="${server.config.dir}/lib/postgresql" includes="*.jar"/>
 </library>
 
 <dataSource id="DefaultDataSource" jndiName="jdbc/myapp">
@@ -44,6 +160,24 @@ JDBC drivers can be placed:
     <properties.postgresql serverName="localhost" portNumber="5432"
                            databaseName="myapp" user="user" password="pass"/>
 </dataSource>
+```
+
+---
+
+### Other Libraries (general pattern)
+
+For any other third-party library that Liberty must load directly (e.g. a custom LDAP provider, a JCA connector, a cryptography provider):
+
+1. Create `<server_name>/lib/<product>/`
+2. Copy the required JARs into that directory
+3. Declare a `<library>` in `server.xml` pointing to it
+4. Reference the library from the relevant Liberty config element via `libraryRef`
+
+```xml
+<!-- server.xml — generic pattern -->
+<library id="MyProductLib">
+    <fileset dir="${server.config.dir}/lib/<product>" includes="*.jar"/>
+</library>
 ```
 
 ## Messaging

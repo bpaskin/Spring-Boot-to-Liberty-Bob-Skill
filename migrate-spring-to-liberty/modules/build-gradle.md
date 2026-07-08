@@ -135,6 +135,8 @@ dependencies {
 
 Scan the original `build.gradle` / `build.gradle.kts` for dependencies whose group does **not** start with `org.springframework` and that are not replaced by a Jakarta EE API. Carry them forward unchanged unless a newer version is required. Common examples:
 
+> **Library placement**: If the dependency is a JDBC driver, MQ client, or any library that Liberty must reference from `server.xml` (e.g. via `<dataSource>` or `<jmsConnectionFactory>`), copy its JARs to `<server_name>/lib/<product>/` and use `compileOnly` instead of `runtimeOnly` in the build file. See [dependency-map.md — Third-party Library Placement](../references/dependency-map.md) for per-product `server.xml` snippets.
+
 | Dependency | Groovy DSL | Scope |
 |---|---|---|
 | **IBM DB2 JDBC** | `runtimeOnly 'com.ibm.db2:jcc:{version}'` | `runtimeOnly` |

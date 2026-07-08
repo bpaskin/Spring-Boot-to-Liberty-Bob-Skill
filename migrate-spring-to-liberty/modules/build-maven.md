@@ -92,6 +92,8 @@ Maven-specific build migration steps. Called from [build.md](build.md).
 
 Scan the original `pom.xml` for dependencies whose `groupId` does **not** start with `org.springframework` and that are not replaced by a Jakarta EE API. Carry them forward unchanged unless a newer version is required. Common examples:
 
+> **Library placement**: If the dependency is a JDBC driver, MQ client, or any library that Liberty must reference from `server.xml` (e.g. via `<dataSource>` or `<jmsConnectionFactory>`), copy its JARs to `<server_name>/lib/<product>/` and use `<scope>provided</scope>` in `pom.xml` instead of `runtime`. See [dependency-map.md — Third-party Library Placement](../references/dependency-map.md) for per-product `server.xml` snippets.
+
 | Dependency | Maven coordinates | Scope |
 |---|---|---|
 | **IBM DB2 JDBC** | `com.ibm.db2:jcc:{version}` | `runtime` |
