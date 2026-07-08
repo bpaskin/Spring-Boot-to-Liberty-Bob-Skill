@@ -42,7 +42,7 @@ Scan the application to understand what needs to migrate:
 - **Build system**: Read the build file (`pom.xml` for Maven, `build.gradle` or `build.gradle.kts` for Gradle) — Spring Boot version, starters, plugins
 - **Java code**: Search for Spring annotations (DI, REST, Data, Security, Scheduling)
 - **Configuration**: Read `application.properties`/`application.yml`, check for profiles
-- **UI / View layer**: Check for Thymeleaf/JSP templates, static resources, Model+View patterns
+- **UI / View layer**: Check for Thymeleaf/JSP templates, static resources, `Model`/`ModelAndView` patterns, `@Controller` (server-rendered) vs `@RestController` (API-only)
 - **Tests**: Check for `@SpringBootTest`, `@WebMvcTest`, `@DataJpaTest`
 
 Present a summary table with area, findings, and complexity. Then ask the user to choose a strategy:
@@ -51,6 +51,8 @@ Present a summary table with area, findings, and complexity. Then ask the user t
 - **MicroProfile**: Adds MicroProfile APIs on top of Jakarta EE for cloud-native features (health, metrics, fault tolerance, config). Recommended for microservices.
 
 **Stop here and wait for the user's response before continuing.** Do not ask about git workflow or anything else in the same message.
+
+> **Spring MVC server-rendered views detected?** If the analysis in the step above finds `@Controller` classes (not `@RestController`) with `Model`/`ModelAndView` return types or Thymeleaf templates, an **additional question must be asked before the frontend module runs** — see Step 3 gate for `frontend` module and [modules/frontend.md](modules/frontend.md#view-technology-decision).
 
 ## Step 2: Git branch (optional)
 

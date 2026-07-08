@@ -9,10 +9,10 @@ Load [references/annotation-map.md](../references/annotation-map.md) before star
 - [ ] Migrate entities (standard JPA 3.2 — `@Entity`, `@Id`, `@GeneratedValue`)
 - [ ] Migrate repositories (CDI `@ApplicationScoped` beans with `EntityManager`)
 - [ ] Migrate service layer (remove Spring stereotypes, use CDI scopes)
-- [ ] Migrate controllers/resources (Spring MVC → Jakarta REST / JAX-RS)
+- [ ] Migrate controllers/resources — approach depends on view technology choice (see **Controller Migration** below)
 - [ ] Migrate DI annotations (`@Autowired` → `@Inject`, `@Component`/`@Service` → `@ApplicationScoped`, etc.)
 - [ ] Migrate configuration injection (`@Value` → `@ConfigProperty`)
-- [ ] Migrate view layer: `Model.addAttribute()` → inject data via JAX-RS or Jakarta Faces
+- [ ] Migrate view layer: `Model.addAttribute()` → Jakarta MVC `Models`, Jakarta Faces backing bean, or JAX-RS response
 - [ ] Remove `@SpringBootApplication` main class
 - [ ] Replace Spring's `@Transactional` with `jakarta.transaction.Transactional`
 - [ ] Compile: `./mvnw clean compile -DskipTests` (Maven) or `./gradlew clean compileJava -x test` (Gradle)
@@ -155,7 +155,121 @@ public class TodoService {
 - Service has real business logic → keep as `@ApplicationScoped`, remove the interface
 - Interface used for testing/mocking → not needed, Mockito and CDI `@Alternative` both work on concrete classes
 
-## Controller → JAX-RS Resource
+## Controller Migration
+
+**The approach here depends on the view technology chosen in [`frontend.md`](frontend.md).** Check the user's decision before applying any of the patterns below.
+
+| User chose | Pattern to apply |
+|---|---|
+| **Jakarta MVC + Krazo** (Option A) | → [Jakarta MVC Controller](#spring-mvc-controller--jakarta-mvc-controller) |
+| **Jakarta Faces + CDI** (Option B) | → [Jakarta Faces Backing Bean](#spring-mvc-controller--jakarta-faces-backing-bean) |
+| **REST-only** / `@RestController` only | → [JAX-RS Resource](#restcontroller--jax-rs-resource) |
+
+---
+
+### Spring MVC `@Controller` → Jakarta MVC Controller
+
+> Apply this pattern only when the user chose **Option A (Jakarta MVC + Krazo)** in `frontend.md`.
+
+```java
+// BEFORE: Spring MVC @Controller (server-rendered view)
+@Controller
+public class TodoController {
+    @Autowired private TodoService todoService;
+
+    @GetMapping("/todos")
+    public String list(Model model) {
+        model.addAttribute("todos", todoService.findAll());
+        return "todos";
+    }
+}
+
+// AFTER: Jakarta MVC @Controller
+import jakarta.inject.Inject;
+import jakarta.mvc.Controller;
+import jakarta.mvc.Models;
+import jakarta.ws.rs.*;
+
+@Path("/todos")
+@Controller
+public class TodoController {
+
+    @Inject
+    private Models models;
+
+    @Inject
+    private TodoService todoService;
+
+    @GET
+    public String list() {
+        models.put("todos", todoService.findAll());
+        return "todos.jsp";   // resolved from /WEB-INF/views/
+    }
+}
+```
+
+---
+
+### Spring MVC `@Controller` → Jakarta Faces Backing Bean
+
+> Apply this pattern only when the user chose **Option B (Jakarta Faces + CDI)** in `frontend.md`.
+
+```java
+// BEFORE: Spring MVC @Controller
+@Controller
+public class TodoController {
+    @Autowired private TodoService todoService;
+
+    @GetMapping("/todos")
+    public String list(Model model) {
+        model.addAttribute("todos", todoService.findAll());
+        return "todos";
+    }
+
+    @PostMapping("/todos")
+    public String create(@ModelAttribute Todo todo) {
+        todoService.save(todo);
+        return "redirect:/todos";
+    }
+}
+
+// AFTER: Jakarta Faces CDI backing bean
+import jakarta.enterprise.context.RequestScoped;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+
+@Named
+@RequestScoped
+public class TodoController {
+
+    @Inject
+    private TodoService todoService;
+
+    private List<Todo> todos;
+    private Todo newTodo = new Todo();
+
+    public void load() {
+        todos = todoService.findAll();
+    }
+
+    public String create() {
+        todoService.save(newTodo);
+        newTodo = new Todo();
+        return "todos?faces-redirect=true";
+    }
+
+    public List<Todo> getTodos() { return todos; }
+    public void setTodos(List<Todo> todos) { this.todos = todos; }
+    public Todo getNewTodo() { return newTodo; }
+    public void setNewTodo(Todo newTodo) { this.newTodo = newTodo; }
+}
+```
+
+---
+
+### `@RestController` → JAX-RS Resource
+
+> Apply this pattern for `@RestController` classes, or when the user chose **REST-only** (no server-rendered views).
 
 ```java
 // BEFORE: Spring MVC REST controller
