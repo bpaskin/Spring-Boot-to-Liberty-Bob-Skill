@@ -1,0 +1,20 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# AI agent session/local files — may contain tokens and secrets
+.claude/
+.cursor/
+.codex/
+.opencode/
+.copilot/
+.cline/
+.continue/
+.windsurf/
+.junie/
+.pi/
+.roo/
+.augment/
+.aider*
+CLAUDE.local.md
+.bob/
