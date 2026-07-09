@@ -68,7 +68,7 @@ In `server.xml`, use `jakartaee-11.0`, `webProfile-11.0`, or `coreProfile-11.0` 
 | Jakarta Security | 4.0 | `jakarta.security.enterprise:jakarta.security.enterprise-api:4.0.0` | `appSecurity-6.0` |
 | Jakarta Authentication | 3.1 | `jakarta.authentication:jakarta.authentication-api:3.1.0` | `appAuthentication-3.1` |
 | Jakarta Expression Language | 6.0 | `jakarta.el:jakarta.el-api:6.0.1` | `expressionLanguage-6.0` |
-| Jakarta Validation | 3.1 | `jakarta.validation:jakarta.validation-api:3.1.1` | `beanValidation-3.1` |
+| Jakarta Validation | 3.1 | `jakarta.validation:jakarta.validation-api:3.1.1` | `validation-3.1` |
 | Jakarta Transactions | 2.0 | `jakarta.transaction:jakarta.transaction-api:2.0.1` | `transaction-2.0` |
 | Jakarta Concurrency | 3.1 | `jakarta.enterprise.concurrent:jakarta.enterprise.concurrent-api:3.1.1` | `concurrent-3.1` |
 | Jakarta CDI (Full) | 4.1 | `jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0`<br>`jakarta.enterprise:jakarta.enterprise.lang-model:4.1.0`<br>`jakarta.enterprise:jakarta.enterprise.cdi-el-api:4.1.0` | `cdi-4.1` |
