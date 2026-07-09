@@ -95,13 +95,14 @@ Scans for accidentally exposed secrets before staging. Shows staged changes summ
 
 ## Reference files
 
-The skill ships three reference tables used internally during migration:
+The skill ships four reference tables used internally during migration:
 
 | Reference | Used during |
 |---|---|
 | [`references/dependency-map.md`](migrate-spring-to-liberty/references/dependency-map.md) | Build module — Spring → Liberty dependency and plugin mapping, JDBC driver placement, individual Jakarta EE 11 / MicroProfile 7 API coordinates |
 | [`references/annotation-map.md`](migrate-spring-to-liberty/references/annotation-map.md) | Code module — DI, REST, Data, Security, Scheduling, Cache, Lifecycle annotation mapping |
 | [`references/config-map.md`](migrate-spring-to-liberty/references/config-map.md) | Build module — `application.properties` property migration covering server, datasource, JPA, logging, profiles, CORS, cache, security, health, and static resources |
+| [`references/jakarta-ee11-liberty-features.md`](migrate-spring-to-liberty/references/jakarta-ee11-liberty-features.md) | Feature-scan module — every Jakarta EE 11 spec and MicroProfile 7 API mapped to its Open Liberty feature name, Maven/Gradle coordinates, profile membership (`coreProfile`, `webProfile`, `jakartaee`), JCache configuration, security examples, typical `<featureManager>` sets, and `persistence.xml` / `beans.xml` skeletons |
 
 ---
 
