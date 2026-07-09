@@ -54,16 +54,25 @@ When Spring MVC `@Controller` classes are detected, present the following to the
 >
 > **What you add to your project:**
 > ```xml
-> <!-- pom.xml — Krazo runtime (RESTEasy variant for Liberty) -->
+> <!-- pom.xml — Jakarta MVC API (compile-time, provided by Krazo at runtime) -->
+> <dependency>
+>     <groupId>jakarta.mvc</groupId>
+>     <artifactId>jakarta.mvc-api</artifactId>
+>     <version>3.0.0</version>
+>     <scope>provided</scope>
+> </dependency>
+> <!-- Krazo RESTEasy runtime (Liberty uses RESTEasy under restfulWS-4.0) -->
 > <dependency>
 >     <groupId>org.eclipse.krazo</groupId>
 >     <artifactId>krazo-resteasy</artifactId>
->     <version>3.0.1</version>
+>     <version>4.0.0</version>
 > </dependency>
 > ```
 > ```xml
 > <!-- server.xml features needed -->
 > <feature>restfulWS-4.0</feature>
+> <feature>jsonb-3.0</feature>
+> <feature>jsonp-2.1</feature>
 > <feature>cdi-4.1</feature>
 > <feature>beanValidation-3.1</feature>
 > <feature>pages-4.0</feature>  <!-- if using JSP/Facelets as the view -->
@@ -108,14 +117,27 @@ When Spring MVC `@Controller` classes are detected, present the following to the
 
 ### Dependency / Feature
 
+> **Always verify the latest versions from Maven Central before adding these dependencies:**
+> - `jakarta.mvc-api`: https://search.maven.org/artifact/jakarta.mvc/jakarta.mvc-api
+> - `krazo-resteasy`: https://search.maven.org/artifact/org.eclipse.krazo/krazo-resteasy
+>
+> The versions below were current as of the last skill update. Check that they are still the latest release before writing to `pom.xml`.
+
 Add Krazo to `pom.xml`:
 
 ```xml
-<!-- pom.xml -->
+<!-- pom.xml — Jakarta MVC API (provided scope; Krazo supplies the implementation) -->
+<dependency>
+    <groupId>jakarta.mvc</groupId>
+    <artifactId>jakarta.mvc-api</artifactId>
+    <version>3.0.0</version>
+    <scope>provided</scope>
+</dependency>
+<!-- Krazo RESTEasy runtime (Liberty uses RESTEasy under restfulWS-4.0) -->
 <dependency>
     <groupId>org.eclipse.krazo</groupId>
     <artifactId>krazo-resteasy</artifactId>
-    <version>3.0.1</version>
+    <version>4.0.0</version>
 </dependency>
 ```
 
@@ -123,6 +145,8 @@ Add features to `server.xml`:
 ```xml
 <featureManager>
     <feature>restfulWS-4.0</feature>
+    <feature>jsonb-3.0</feature>
+    <feature>jsonp-2.1</feature>
     <feature>cdi-4.1</feature>
     <feature>beanValidation-3.1</feature>
     <feature>pages-4.0</feature>

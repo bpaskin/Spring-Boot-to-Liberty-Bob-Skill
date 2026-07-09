@@ -94,6 +94,6 @@ Environment variable overrides follow MicroProfile's relaxed naming: `APP_CONTEX
 
 - **Port**: Open Liberty defaults to `9080` (HTTP) and `9443` (HTTPS), not `8080`. Update any client configurations accordingly.
 - **Context root**: The default context root for a WAR deployed to Liberty is `/<artifactId>`. Set `contextRoot="/"` in `server.xml` if the app expects to be at the root.
-- **Naming strategy**: Spring Boot defaults to snake_case column naming (`firstName` → `first_name`). Hibernate on Liberty uses the JPA-compliant default (preserves Java names). Set `hibernate.physical_naming_strategy` in `persistence.xml` if needed: `org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy`.
+- **Naming strategy**: Spring Boot defaults to snake_case column naming (`firstName` → `first_name`). EclipseLink (the JPA provider on Liberty) preserves Java field names as-is and has no naming strategy equivalent. Add `@Column(name = "column_name")` to each entity field that needs an explicit column mapping.
 - **Build tool wrapper**: If the project has `mvnw`/`gradlew`, always use `./mvnw` or `./gradlew`. This ensures reproducible builds.
 - **Packaging**: Open Liberty applications are packaged as WAR files and deployed to the Liberty runtime. The `liberty-maven-plugin` / `liberty-gradle-plugin` handle server download, configuration, and deployment automatically.

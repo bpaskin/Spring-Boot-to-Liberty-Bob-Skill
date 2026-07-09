@@ -97,14 +97,14 @@ JAXB is not part of the Jakarta EE 11 Platform profile but may be required if yo
 <dependency>
     <groupId>jakarta.xml.bind</groupId>
     <artifactId>jakarta.xml.bind-api</artifactId>
-    <version>4.0.2</version>
+    <version>4.0.5</version>
     <scope>provided</scope>
 </dependency>
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.2'
+compileOnly 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.5'
 ```
 
 Enable the corresponding Liberty feature in `server.xml`:
@@ -186,12 +186,24 @@ public Response create(@Valid Product product) { ... }
 
 JCache (`javax.cache`) is a standard Java caching API. Open Liberty supports JCache for distributed application caching, HTTP session caching, distributed authentication caching, and distributed logged-out cookie caching.
 
-Enable the Liberty feature:
+> **Important**: Liberty does **not** implement JCache itself — there is no `jcache` Liberty feature to enable. Instead, bring in a JCache-compliant provider as a Maven/Gradle dependency and configure it in `server.xml` via `<cachingProvider>`. The `javax.cache` namespace has **not** been migrated to `jakarta.cache` in JCache 1.1 — keep all `javax.cache.*` imports as-is.
+
+Add the JCache provider to `pom.xml` (choose one):
 
 ```xml
-<featureManager>
-    <feature>jcache-1.1</feature>
-</featureManager>
+<!-- Hazelcast -->
+<dependency>
+    <groupId>com.hazelcast</groupId>
+    <artifactId>hazelcast</artifactId>
+    <version>5.5.0</version>
+</dependency>
+
+<!-- EhCache -->
+<dependency>
+    <groupId>org.ehcache</groupId>
+    <artifactId>ehcache</artifactId>
+    <version>3.10.8</version>
+</dependency>
 ```
 
 ### Configuration elements
@@ -202,7 +214,9 @@ Enable the Liberty feature:
 | `<cacheManager>` | Configures a single `javax.cache.CacheManager` — accepts a `uri` for provider-specific config and `<properties>` child elements |
 | `<cache>` | Configures a single named `javax.cache.Cache` instance — if the named cache does not exist in the `CacheManager`, Liberty creates it |
 
-### Minimum configuration
+### server.xml configuration
+
+Declare a `<library>` pointing to the provider JAR, then configure a `<cache>` with a nested `<cacheManager>` and `<cachingProvider>`:
 
 ```xml
 <library id="JCacheLib">
@@ -210,23 +224,8 @@ Enable the Liberty feature:
 </library>
 
 <cache id="SampleCache" name="SampleCache">
-    <cacheManager>
-        <cachingProvider jCacheLibraryRef="JCacheLib"/>
-    </cacheManager>
-</cache>
-```
-
-### Provider-specific configuration
-
-Use `providerClass` to explicitly select a `CachingProvider` implementation, `uri` to pass a provider config file, and `<properties>` for provider-specific key/value pairs:
-
-```xml
-<library id="JCacheLib">
-    <file name="${shared.resource.dir}/jcacheprovider.jar"/>
-</library>
-
-<cache id="SampleCache" name="SampleCache">
-    <cacheManager uri="file:///${shared.resource.dir}/jcacheconfig.xml">
+    <cacheManager
+            uri="file:///${shared.resource.dir}/jcacheconfig.xml">
         <properties
             org.acme.jcache.prop1="value1"
             org.acme.jcache.prop2="value2"/>
@@ -237,7 +236,10 @@ Use `providerClass` to explicitly select a `CachingProvider` implementation, `ur
 </cache>
 ```
 
-If `providerClass` is omitted, Liberty uses the default provider declared in `META-INF/services/javax.cache.spi.CachingProvider` inside the provider JAR.
+- `uri` — path to a provider-specific config file (optional; omit if the provider needs no external config)
+- `<properties>` — provider-specific key/value pairs passed to the `CacheManager` (optional)
+- `providerClass` — fully-qualified `CachingProvider` implementation; if omitted, Liberty uses the default declared in `META-INF/services/javax.cache.spi.CachingProvider` inside the provider JAR
+- `jCacheLibraryRef` — references the `<library>` id that contains the provider JAR
 
 ### Multiple caches sharing one CacheManager
 
@@ -263,14 +265,14 @@ When multiple Liberty components (e.g., authentication cache + session cache) sh
 
 ### JCache use cases in Open Liberty
 
-| Use case | Liberty feature required |
-|---|---|
-| Application-level caching (`@CacheResult` etc.) | `jcache-1.1` |
-| Distributed HTTP session caching | `sessionCache-1.0` + `jcache-1.1` |
-| Distributed authentication cache | `appSecurity-6.0` + `jcache-1.1` |
-| Distributed logged-out cookie tracking | `appSecurity-6.0` + `jcache-1.1` |
+| Use case | Liberty feature required | Notes |
+|---|---|---|
+| Application-level caching (`@CacheResult` etc.) | None | Provider dependency + `<cachingProvider>` in `server.xml` |
+| Distributed HTTP session caching | `sessionCache-1.0` | Provider dependency + `<cachingProvider>` in `server.xml` |
+| Distributed authentication cache | `appSecurity-6.0` | Provider dependency + `<cachingProvider>` in `server.xml` |
+| Distributed logged-out cookie tracking | `appSecurity-6.0` | Provider dependency + `<cachingProvider>` in `server.xml` |
 
-> **Provider note**: Any JCache-compliant provider works (Hazelcast, EhCache, Infinispan, Redis via Redisson, etc.). Place the provider JAR in `${shared.resource.dir}/` and reference it via a `<library>` element.
+> **Provider note**: Any JCache-compliant provider works (Hazelcast, EhCache, Infinispan, Redis via Redisson, etc.). Place the provider JAR in `${shared.resource.dir}/` and reference it via a `<library>` element, or include it in the WAR as a regular compile/runtime dependency.
 
 ---
 
@@ -302,6 +304,8 @@ Add to `server.xml`:
 <featureManager>
     <feature>appSecurity-6.0</feature>
     <feature>restfulWS-4.0</feature>
+    <feature>jsonb-3.0</feature>
+    <feature>jsonp-2.1</feature>
 </featureManager>
 
 <basicRegistry id="basic" realm="BasicRealm">
@@ -335,13 +339,14 @@ MicroProfile is not part of Jakarta EE but is supported by Open Liberty alongsid
 
 ## Typical server.xml Feature Sets
 
-### Minimal REST API (Jakarta REST + CDI + JSON-B)
+### Minimal REST API (Jakarta REST + CDI + JSON-B + JSON-P)
 
 ```xml
 <featureManager>
     <feature>restfulWS-4.0</feature>
-    <feature>cdi-4.1</feature>
     <feature>jsonb-3.0</feature>
+    <feature>jsonp-2.1</feature>
+    <feature>cdi-4.1</feature>
 </featureManager>
 ```
 
@@ -350,8 +355,9 @@ MicroProfile is not part of Jakarta EE but is supported by Open Liberty alongsid
 ```xml
 <featureManager>
     <feature>restfulWS-4.0</feature>
-    <feature>cdi-4.1</feature>
     <feature>jsonb-3.0</feature>
+    <feature>jsonp-2.1</feature>
+    <feature>cdi-4.1</feature>
     <feature>persistence-3.2</feature>
     <feature>beanValidation-3.1</feature>
     <feature>appSecurity-6.0</feature>
@@ -372,8 +378,9 @@ MicroProfile is not part of Jakarta EE but is supported by Open Liberty alongsid
 ```xml
 <featureManager>
     <feature>restfulWS-4.0</feature>
-    <feature>cdi-4.1</feature>
     <feature>jsonb-3.0</feature>
+    <feature>jsonp-2.1</feature>
+    <feature>cdi-4.1</feature>
     <feature>mpHealth-4.0</feature>
     <feature>mpMetrics-5.1</feature>
     <feature>mpConfig-3.1</feature>

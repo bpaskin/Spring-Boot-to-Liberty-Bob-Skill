@@ -108,9 +108,16 @@ Ensure these are in the build file (should already be added by the build module)
 ```xml
 <!-- MicroShed Testing with Liberty support -->
 <dependency>
-    <groupId>io.openliberty.tools</groupId>
+    <groupId>org.microshed</groupId>
     <artifactId>microshed-testing-liberty</artifactId>
     <version>0.9.2</version>
+    <scope>test</scope>
+</dependency>
+<!-- Hibernate Validator — Bean Validation implementation required by MicroShed -->
+<dependency>
+    <groupId>org.hibernate.validator</groupId>
+    <artifactId>hibernate-validator</artifactId>
+    <version>9.0.1.Final</version>
     <scope>test</scope>
 </dependency>
 <!-- JUnit 5 -->
@@ -138,7 +145,8 @@ Ensure these are in the build file (should already be added by the build module)
 
 **Gradle:**
 ```groovy
-testImplementation 'io.openliberty.tools:microshed-testing-liberty:0.9.2'
+testImplementation 'org.microshed:microshed-testing-liberty:0.9.2'
+testImplementation 'org.hibernate.validator:hibernate-validator:9.0.1.Final'
 testImplementation 'org.junit.jupiter:junit-jupiter:5.12.2'
 testImplementation 'org.mockito:mockito-junit-jupiter:5.18.0'
 testImplementation 'io.rest-assured:rest-assured:5.5.2'

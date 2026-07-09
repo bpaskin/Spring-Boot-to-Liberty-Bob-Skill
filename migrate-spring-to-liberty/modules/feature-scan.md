@@ -117,7 +117,7 @@ Use the scan results and the table below to determine which features are require
 | If you found … | Add this feature |
 |---|---|
 | `@ApplicationScoped`, `@Inject`, `@Produces`, `CDI` imports | `cdi-4.1` |
-| `@Path`, `@GET/@POST/@PUT/@DELETE/@PATCH`, `@ApplicationPath`, JAX-RS `Application` class | `restfulWS-4.0` |
+| `@Path`, `@GET/@POST/@PUT/@DELETE/@PATCH`, `@ApplicationPath`, JAX-RS `Application` class | `restfulWS-4.0` + `jsonb-3.0` + `jsonp-2.1` |
 | `@Entity`, `@PersistenceContext`, `EntityManager`, `persistence.xml` present | `persistence-3.2` |
 | `@NotNull`, `@NotBlank`, `@Valid`, `@Size`, Bean Validation imports | `beanValidation-3.1` |
 | `@Transactional` (jakarta.transaction) | `transaction-2.0` |
@@ -141,13 +141,12 @@ Use the scan results and the table below to determine which features are require
 | `@Incoming`, `@Outgoing`, `@Channel`, `Emitter` (Reactive Messaging) | `mpReactiveMessaging-3.0` |
 | `<dataSource>` in server.xml or JDBC driver in WAR | `jdbc-4.3` |
 | `<connectionFactory>` or JMS annotations | `messaging-3.0` |
-| `@CacheResult`, `@CacheRemove`, `JCache` usage | `jcache-1.1` |
+| `@CacheResult`, `@CacheRemove`, `JCache` usage | No Liberty feature required — add the JCache provider as a dependency (e.g., Hazelcast, EhCache) and configure `<cachingProvider>` in `server.xml` |
+| `@XmlRootElement`, `@XmlElement`, `@XmlAttribute`, `JAXBContext`, `jakarta.xml.bind.*` imports | `xmlBinding-4.0` + add `jakarta.xml.bind:jakarta.xml.bind-api:4.0.5` (provided) to `pom.xml` |
 
 ### JSON serialization note
 
-`restfulWS-4.0` on Liberty bundles JSON-B 3.0 automatically for `application/json` responses.  
-Add `jsonb-3.0` explicitly only if you use the `Jsonb` API directly in Java code outside of JAX-RS endpoints.  
-Add `jsonp-2.1` only if you use `JsonObjectBuilder` / `JsonArray` directly.
+Always add `jsonb-3.0` and `jsonp-2.1` whenever `restfulWS-4.0` is enabled. This ensures full JSON serialization support (JSON-B for object binding and JSON-P for programmatic JSON building) is available alongside JAX-RS.
 
 ### Feature compatibility rules
 
@@ -175,9 +174,10 @@ Replace the umbrella feature block with the minimal computed set. The structure 
     <!-- Jakarta EE -->
     <feature>cdi-4.1</feature>
     <feature>restfulWS-4.0</feature>
+    <feature>jsonb-3.0</feature>
+    <feature>jsonp-2.1</feature>
     <feature>persistence-3.2</feature>
     <feature>beanValidation-3.1</feature>
-    <feature>jsonb-3.0</feature>
     <!-- MicroProfile -->
     <feature>mpConfig-3.1</feature>
     <feature>mpHealth-4.0</feature>

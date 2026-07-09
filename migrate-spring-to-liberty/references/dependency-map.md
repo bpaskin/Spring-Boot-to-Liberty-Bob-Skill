@@ -10,8 +10,9 @@
 | `spring-boot-starter-validation` | `jakarta.platform:jakarta.jakartaee-api:11.0.0` (provided) + `beanValidation-3.1` feature |
 | `spring-boot-starter-security` | `jakarta.platform:jakarta.jakartaee-api:11.0.0` + `appSecurity-5.0` feature + `<basicRegistry>` or OIDC |
 | `spring-boot-starter-actuator` | `org.eclipse.microprofile:microprofile:7.0` (provided) + `mpHealth-4.0` + `mpMetrics-5.1` features |
-| `spring-boot-starter-cache` | JCache via `jcache-1.1` Liberty feature + JCache provider (EhCache, Hazelcast) |
-| `spring-boot-starter-test` | `io.openliberty.tools:microshed-testing-liberty` + `org.junit.jupiter:junit-jupiter` |
+| `spring-boot-starter-cache` | JCache provider dependency (e.g., `com.hazelcast:hazelcast` or `org.ehcache:ehcache`) + `<cachingProvider>` in `server.xml` — **no Liberty `jcache` feature needed** |
+| `spring-boot-starter-ws` / `javax.xml.bind:jaxb-api` / `jakarta.xml.bind:jakarta.xml.bind-api` | `jakarta.xml.bind:jakarta.xml.bind-api:4.0.5` (provided) + `xmlBinding-4.0` feature |
+| `spring-boot-starter-test` | `org.microshed:microshed-testing-liberty` + `org.junit.jupiter:junit-jupiter` |
 
 ## Data / Persistence
 
@@ -216,7 +217,7 @@ For any other third-party library that Liberty must load directly (e.g. a custom
 
 | Spring Boot | Open Liberty |
 |---|---|
-| `spring-boot-starter-test` | `io.openliberty.tools:microshed-testing-liberty` + JUnit Jupiter |
+| `spring-boot-starter-test` | `org.microshed:microshed-testing-liberty` + JUnit Jupiter |
 | `spring-boot-test` (`@SpringBootTest`) | `org.microshed.testing:microshed-testing-liberty` — `@MicroShedTest` |
 | `spring-security-test` | REST Assured with auth headers or MicroProfile JWT test tokens |
 

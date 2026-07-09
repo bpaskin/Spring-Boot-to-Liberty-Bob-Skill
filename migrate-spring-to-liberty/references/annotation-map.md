@@ -28,6 +28,7 @@
 - CDI beans are discovered by default in a bean archive (WAR with `beans.xml` or CDI 4.0+ annotated discovery).
 - Constructor injection works without `@Inject` if there is only one constructor and all parameters are injectable.
 - `@Inject` on a field performs field injection. Constructor injection is preferred for testability.
+- **`DataSource` cannot be injected with `@Inject`** — Liberty's `<dataSource>` is JNDI-bound, not a CDI bean. Use `@Resource(lookup = "jdbc/myapp")` (`jakarta.annotation.Resource`) matching the `jndiName` in `server.xml`.
 
 ## REST / Web (Spring MVC → Jakarta REST / JAX-RS 4.0)
 
@@ -76,10 +77,11 @@
 | `@EnableJpaRepositories` | Not needed | CDI + JPA auto-discovered via `persistence.xml` |
 | `spring.jpa.hibernate.ddl-auto` | `jakarta.persistence.schema-generation.database.action` in `persistence.xml` | Values: `create`, `drop-and-create`, `create-only`, `drop`, `none` |
 
-**JPA 3.2 naming strategy**: Liberty/Hibernate uses the JPA-compliant default which preserves Java field names. To match Spring Boot's snake_case convention add:
-```xml
-<property name="hibernate.physical_naming_strategy"
-          value="org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy"/>
+**JPA 3.2 naming strategy**: EclipseLink (the JPA provider on Liberty) preserves Java field names as-is — there is no naming strategy equivalent to Spring Boot's `SpringPhysicalNamingStrategy`. To match Spring Boot's snake_case column names, add `@Column` explicitly to each entity field:
+
+```java
+@Column(name = "first_name")
+private String firstName;
 ```
 
 ## Scheduling (Spring → MicroProfile Scheduler)
@@ -131,9 +133,9 @@ public class AdminResource { ... }
 
 | Spring | Jakarta EE 11 / MicroProfile | Notes |
 |---|---|---|
-| `@Cacheable("name")` | JCache (`@CacheResult`) or manual `Map` cache | Requires `jcache` Liberty feature |
-| `@CacheEvict("name")` | `@CacheRemove` | |
-| `@EnableCaching` | Not needed | Enable via `jcache` feature in `server.xml` |
+| `@Cacheable("name")` | JCache (`@CacheResult(cacheName="name")`) | `javax.cache` namespace — not migrated to `jakarta` yet; API is part of `jakartaee-api` BOM |
+| `@CacheEvict("name")` | `@CacheRemove(cacheName="name")` | |
+| `@EnableCaching` | Not needed | Configure `<cachingProvider>` in `server.xml`; no Liberty `jcache` feature required |
 
 ## Configuration Properties (Spring → MicroProfile Config)
 

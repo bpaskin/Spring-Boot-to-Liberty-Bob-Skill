@@ -117,9 +117,6 @@ Create `src/main/resources/META-INF/persistence.xml` if it does not exist:
         <properties>
             <!-- Schema generation — equivalent to spring.jpa.hibernate.ddl-auto -->
             <property name="jakarta.persistence.schema-generation.database.action" value="drop-and-create"/>
-            <!-- Optional: set naming strategy to match Spring Boot's snake_case default -->
-            <property name="hibernate.physical_naming_strategy"
-                      value="org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy"/>
         </properties>
     </persistence-unit>
 </persistence>

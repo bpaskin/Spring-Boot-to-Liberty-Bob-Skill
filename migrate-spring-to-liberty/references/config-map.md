@@ -54,6 +54,21 @@ Datasource configuration moves from `application.properties` to `server.xml`. Th
 | `spring.datasource.password` | `<properties password="..."/>` |
 | `spring.datasource.driver-class-name` | `<jdbcDriver libraryRef="..."/>` (driver auto-detected from URL) |
 
+**Injecting a DataSource into application code**: Liberty's `<dataSource>` is bound to JNDI — it is **not** a CDI bean and cannot be injected with `@Inject`. Use `@Resource` with the matching `jndiName` instead:
+
+```java
+import jakarta.annotation.Resource;
+import javax.sql.DataSource;
+
+// WRONG — will fail at runtime: CDI cannot resolve a DataSource from server.xml
+// @Inject
+// private DataSource dataSource;
+
+// CORRECT — inject via JNDI name declared in server.xml <dataSource jndiName="jdbc/myapp">
+@Resource(lookup = "jdbc/myapp")
+private DataSource dataSource;
+```
+
 **Production secrets**: Use Liberty variables or MicroProfile Config to inject credentials from environment variables at runtime:
 
 ```xml
@@ -74,13 +89,13 @@ JPA configuration moves from `application.properties` to `persistence.xml`.
 | `spring.jpa.properties.hibernate.dialect` | `hibernate.dialect` (usually auto-detected) |
 | `spring.jpa.properties.hibernate.format_sql` | `hibernate.format_sql=true` |
 | `spring.jpa.open-in-view=false` | Not applicable (no OSIV in Liberty) |
-| `spring.jpa.hibernate.naming.physical-strategy` | `hibernate.physical_naming_strategy` |
+| `spring.jpa.hibernate.naming.physical-strategy` | `@Column(name="...")` on each entity field |
 
-**Naming strategy warning**: Spring Boot defaults to `SpringPhysicalNamingStrategy` (camelCase → snake_case). Liberty uses Hibernate's JPA-compliant default which preserves Java names. To match Spring Boot's column naming, add:
+**Naming strategy warning**: Spring Boot defaults to `SpringPhysicalNamingStrategy` (camelCase → snake_case). EclipseLink (the JPA provider on Liberty) has no equivalent naming strategy hook. Annotate each entity field explicitly with `@Column` to preserve the snake_case column names:
 
-```xml
-<property name="hibernate.physical_naming_strategy"
-          value="org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy"/>
+```java
+@Column(name = "first_name")
+private String firstName;
 ```
 
 ### Schema generation values mapping
@@ -148,8 +163,8 @@ MicroProfile Config property sources in priority order (highest first):
 
 | Spring Boot | Open Liberty |
 |---|---|
-| `spring.cache.type=caffeine` | `jcache-1.1` feature + JCache provider (e.g., Hazelcast, EhCache) |
-| `@Cacheable("name")` | `@CacheResult(cacheName="name")` (JCache annotations) |
+| `spring.cache.type=caffeine` | JCache provider dependency (Hazelcast, EhCache, etc.) + `<cachingProvider>` in `server.xml` — no Liberty `jcache` feature needed |
+| `@Cacheable("name")` | `@CacheResult(cacheName="name")` — uses `javax.cache` annotations (not yet migrated to `jakarta` namespace) |
 | `@CacheEvict("name")` | `@CacheRemove(cacheName="name")` |
 
 ## Security
