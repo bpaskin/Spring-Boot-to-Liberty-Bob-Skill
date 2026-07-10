@@ -131,7 +131,6 @@ Add Krazo to `pom.xml`:
     <groupId>jakarta.mvc</groupId>
     <artifactId>jakarta.mvc-api</artifactId>
     <version>3.0.0</version>
-    <scope>provided</scope>
 </dependency>
 <!-- Krazo RESTEasy runtime (Liberty uses RESTEasy under restfulWS-4.0) -->
 <dependency>
