@@ -216,30 +216,20 @@ The plugin runs automatically after compilation. No additional configuration is 
 
 | Goal | Description |
 |---|---|
-| `liberty:create` | Download and create a Liberty server instance |
 | `liberty:install-feature` | Install features declared in `server.xml` |
-| `liberty:deploy` | Deploy the application WAR to the server |
-| `liberty:run` | Start the server in the foreground |
-| `liberty:start` | Start the server in the background |
-| `liberty:stop` | Stop the background server |
-| `liberty:dev` | **Start in dev mode (hot reload on file change) — use this to test** |
+| `liberty:dev` | **Create server, deploy app, and start in dev mode (hot reload) — always use this** |
 | `liberty:package` | Package server + app into a runnable JAR or ZIP |
 
 ## Testing the Application
 
-When ready to test, use `liberty:dev` to start the server with hot reload, then `liberty:stop` when finished:
+Use `liberty:dev` to create the server, deploy the app, and start with hot reload in a single command:
 
 ```bash
-# Start the server in dev mode — reloads automatically on source changes
+# Creates server, deploys app, starts with hot reload — reloads automatically on source changes
 ./mvnw liberty:dev
 ```
 
-Press `Enter` in the terminal to run tests while the server is running.
-
-```bash
-# Stop the server when done testing
-./mvnw liberty:stop
-```
+Press `Enter` in the terminal to run tests while the server is running. Press `Ctrl+C` to stop.
 
 ## Complete Before/After Example
 

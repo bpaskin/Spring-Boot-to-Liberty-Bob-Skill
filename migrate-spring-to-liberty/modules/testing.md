@@ -155,7 +155,7 @@ testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
 ## Watch out
 
-- **Docker required for MicroShed**: MicroShed Testing uses Testcontainers to start a real Liberty container. Docker (or Podman) must be running on the test machine. If Docker is unavailable, fall back to REST Assured against a Liberty instance started by `liberty:start` in a pre-integration-test phase.
+- **Docker required for MicroShed**: MicroShed Testing uses Testcontainers to start a real Liberty container. Docker (or Podman) must be running on the test machine. If Docker is unavailable, start Liberty manually with `./mvnw liberty:dev` (or `./gradlew libertyDev`) before running tests, and use REST Assured against `localhost:9080`.
 - **Integration test naming**: Maven Failsafe runs tests ending in `IT` (e.g., `TodoResourceIT`). Unit tests (`TodoServiceTest`) run with Surefire. Keep these conventions for correct lifecycle separation.
 - **Test port**: MicroShed uses a random port managed by Testcontainers. Never hardcode `localhost:9080` in integration tests — use the injected client or `server.getBaseURL()`.
 - **No `@WebMvcTest` equivalent**: Use `@MicroShedTest` for all integration test types. For data-only tests, consider H2 in-memory with the `persistence-3.2` feature.

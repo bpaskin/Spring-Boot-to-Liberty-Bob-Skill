@@ -234,35 +234,25 @@ tasks.war {
 
 | Task | Description |
 |---|---|
-| `libertyCreate` | Download and create a Liberty server instance |
 | `libertyInstallFeature` | Install features declared in `server.xml` |
-| `libertyDeploy` | Deploy the WAR to the server |
-| `libertyRun` | Start the server in the foreground |
-| `libertyStart` | Start the server in the background |
-| `libertyStop` | Stop the background server |
-| `libertyDev` | **Start in dev mode (hot reload on file change) — use this to test** |
+| `libertyDev` | **Create server, deploy app, and start in dev mode (hot reload) — always use this** |
 | `libertyPackage` | Package server + app into a runnable JAR |
 
 ## Testing the Application
 
-When ready to test, use `libertyDev` to start the server with hot reload, then `libertyStop` when finished:
+Use `libertyDev` to create the server, deploy the app, and start with hot reload in a single command:
 
 ```bash
-# Start the server in dev mode — reloads automatically on source changes
+# Creates server, deploys app, starts with hot reload — reloads automatically on source changes
 ./gradlew libertyDev
 ```
 
-Press `Enter` in the terminal to run tests while the server is running.
-
-```bash
-# Stop the server when done testing
-./gradlew libertyStop
-```
+Press `Enter` in the terminal to run tests while the server is running. Press `Ctrl+C` to stop.
 
 ## Gradle-specific watch out
 
 - **`io.spring.dependency-management` plugin**: Must be removed entirely.
-- **`bootJar` / `bootRun` tasks**: These are Spring Boot tasks and no longer exist after removing the plugin. Use `libertyRun` / `libertyDev` instead.
+- **`bootJar` / `bootRun` tasks**: These are Spring Boot tasks and no longer exist after removing the plugin. Use `libertyDev` instead.
 - **`providedCompile` scope**: Gradle does not have `provided` scope by default for the `java` plugin (it exists in `war` plugin). Jakarta EE APIs must be `providedCompile` (or `compileOnly`) so they are not bundled in the WAR — Liberty provides them at runtime.
 - **Gradle wrapper**: Always use `./gradlew` if the project has `gradlew`/`gradlew.bat`.
 - **Groovy vs Kotlin DSL**: Do not mix `.gradle` and `.gradle.kts` syntax.

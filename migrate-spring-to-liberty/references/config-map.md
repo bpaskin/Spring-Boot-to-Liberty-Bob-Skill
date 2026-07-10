@@ -27,7 +27,7 @@ Use Liberty variables to make the port configurable:
 <httpEndpoint id="defaultHttpEndpoint" host="*" httpPort="${httpPort}" httpsPort="9443"/>
 ```
 
-Override via environment variable: `httpPort=8080 ./mvnw liberty:run`
+Override via environment variable: `httpPort=8080 ./mvnw liberty:dev`
 
 ## Datasource
 

@@ -13,9 +13,7 @@ Start the migrated application on Open Liberty locally, read the startup logs, a
 
 ## Starting Liberty
 
-### Recommended: dev mode (hot reload)
-
-Dev mode watches source files and redeploys on change — fastest inner-loop for fixing errors:
+Use `liberty:dev` / `libertyDev` to create the server, deploy the application, and start with hot reload — all in one command. **Do not use `liberty:create`, `liberty:deploy`, `liberty:run`, or `liberty:start` separately.**
 
 **Maven:**
 ```bash
@@ -34,18 +32,6 @@ Watch for this line in the console — it means the server is ready:
 ```
 
 Press `Enter` in dev-mode to run tests. Press `Ctrl+C` to stop.
-
-### Alternative: foreground run
-
-**Maven:**
-```bash
-./mvnw liberty:run
-```
-
-**Gradle:**
-```bash
-./gradlew libertyRun
-```
 
 ### Alternative: package then run
 
@@ -134,7 +120,7 @@ CWWKZ0014W: The application <name> could not be started as it could not be found
 ```
 
 **Fix:**
-- Ensure you ran the full build before starting: `./mvnw package -DskipTests` then `./mvnw liberty:run`, **or** just use `./mvnw liberty:dev` which builds automatically.
+- Use `./mvnw liberty:dev` / `./gradlew libertyDev` — this builds and deploys automatically; no separate package step is needed.
 - Verify `<webApplication location="..."/>` in `server.xml` uses `${server.config.dir}/apps/<artifactId>.war`.
 - The `<finalName>` in `pom.xml` (or `archiveFileName` in Gradle) must match the WAR location in `server.xml`.
 
@@ -304,8 +290,8 @@ Remove or reduce trace specifications once the issue is resolved — trace loggi
 
 ## Watch out
 
-- **Dev mode vs run mode**: `liberty:dev` / `libertyDev` rebuilds and redeploys on source file changes without restarting the JVM. Use it during the error-fixing loop. Use `liberty:run` for a clean final verification.
+- **Always use dev mode**: `liberty:dev` / `libertyDev` creates the server, deploys the app, and starts with hot reload in one command. Do not use `liberty:create`, `liberty:deploy`, `liberty:run`, or `liberty:start`.
 - **FFDC files**: Liberty creates an FFDC file for every unexpected exception. These contain the full stack trace and are the primary debugging artifact for errors that produce no console message.
-- **Liberty downloads on first run**: The first `liberty:dev` / `liberty:run` will download Open Liberty from Maven Central. This requires internet access and may take a minute. Subsequent runs use the cached download.
+- **Liberty downloads on first run**: The first `liberty:dev` / `libertyDev` will download Open Liberty from Maven Central. This requires internet access and may take a minute. Subsequent runs use the cached download.
 - **Feature installation on first run**: Liberty installs declared features on first startup. Watch for `CWWKF0012I: The server installed the following features` — this is normal.
 - **Context root default**: If you see a 404 at `/`, the context root is `/<artifactId>` by default. Add `contextRoot="/"` to `<webApplication/>` in `server.xml` or use `liberty.var.app.context.root=/` in `pom.xml` properties.
