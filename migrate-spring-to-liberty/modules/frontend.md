@@ -35,7 +35,7 @@ When Spring MVC `@Controller` classes are detected, present the following to the
 
 ---
 
-> **Your Spring Boot application uses Spring MVC with server-rendered views. On Open Liberty you have two options for the view layer. Here are the trade-offs:**
+> **Your Spring Boot application uses Spring MVC with server-rendered views. On Open Liberty you have three options for the view layer. Here are the trade-offs:**
 >
 > ### Option A — Jakarta MVC 2.1 + Eclipse Krazo
 >
@@ -103,9 +103,42 @@ When Spring MVC `@Controller` classes are detected, present the following to the
 >
 > ---
 >
+> ### Option C — Keep Thymeleaf (bundled in WAR)
+>
+> **Pros**
+> - **Smallest template change** — existing `.html` Thymeleaf templates work with minimal edits; `th:*` attributes and EL expressions stay as-is
+> - No learning curve for the view layer; developers already familiar with Thymeleaf keep that knowledge
+> - Thymeleaf's layout dialect and fragment system work unchanged
+> - Good choice if a future front-end modernisation (React, Vue) is planned and the Thymeleaf layer is temporary
+>
+> **Cons**
+> - **Extra dependencies** — Thymeleaf and its Spring-free integration must be bundled in the WAR; Liberty does not provide Thymeleaf
+> - Thymeleaf's Spring MVC integration (`thymeleaf-spring6`) is removed; you must wire the `TemplateEngine` manually via CDI and forward from a Servlet
+> - Spring-specific dialect features (`#mvc`, `#authentication`, `sec:authorize`, Spring form tags) **do not work** without Spring — these must be rewritten
+> - Results in a mixed dependency model: a non-Jakarta standard library bundled inside a Jakarta EE WAR
+> - Larger WAR footprint; Thymeleaf is a non-trivial dependency tree
+>
+> **What you add to your project:**
+> ```xml
+> <!-- pom.xml — Thymeleaf core (no Spring integration; bundled in WAR) -->
+> <dependency>
+>     <groupId>org.thymeleaf</groupId>
+>     <artifactId>thymeleaf</artifactId>
+>     <version>3.1.3.RELEASE</version>
+> </dependency>
+> ```
+> ```xml
+> <!-- server.xml features needed -->
+> <feature>servlet-6.0</feature>   <!-- or cdi-4.1 which pulls servlet in -->
+> <feature>cdi-4.1</feature>
+> ```
+>
+> ---
+>
 > **Which would you like to use?**
 > - **A) Jakarta MVC + Krazo** — closest migration path from Spring MVC, action-based
 > - **B) Jakarta Faces + CDI** — no extra dependencies, Liberty-native, component-based
+> - **C) Keep Thymeleaf** — smallest template changes, extra dependencies bundled in WAR
 
 ---
 
@@ -317,6 +350,180 @@ src/main/webapp/todos.xhtml
 src/main/webapp/WEB-INF/templates/layout.xhtml
 ```
 
+## Option C — Keep Thymeleaf (bundled in WAR)
+
+Use this path when the user wants to retain Thymeleaf templates with the least possible template-level changes. Thymeleaf runs as a third-party library bundled inside the WAR — Liberty does not provide it.
+
+> **Always verify the latest version from Maven Central before adding:**
+> - `thymeleaf`: https://search.maven.org/artifact/org.thymeleaf/thymeleaf
+>
+> The version below was current as of the last skill update. Check that it is still the latest release before writing to `pom.xml`.
+
+### Dependency / Feature
+
+Add Thymeleaf core to `pom.xml` (no Spring integration — `thymeleaf-spring6` is removed):
+
+```xml
+<!-- pom.xml — Thymeleaf core, bundled in WAR -->
+<dependency>
+    <groupId>org.thymeleaf</groupId>
+    <artifactId>thymeleaf</artifactId>
+    <version>3.1.3.RELEASE</version>
+</dependency>
+```
+
+Add features to `server.xml`:
+```xml
+<featureManager>
+    <feature>servlet-6.0</feature>
+    <feature>cdi-4.1</feature>
+</featureManager>
+```
+
+### Wire the TemplateEngine via CDI
+
+Spring Boot auto-configured the `TemplateEngine`. In the Liberty WAR you must produce it as a CDI bean:
+
+```java
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.templatemode.TemplateMode;
+import org.thymeleaf.templateresolver.WebApplicationTemplateResolver;
+import org.thymeleaf.web.servlet.JakartaServletWebApplication;
+
+import jakarta.inject.Inject;
+import jakarta.servlet.ServletContext;
+
+@ApplicationScoped
+public class ThymeleafConfig {
+
+    @Inject
+    private ServletContext servletContext;
+
+    @Produces
+    @ApplicationScoped
+    public TemplateEngine templateEngine() {
+        JakartaServletWebApplication webApp =
+            JakartaServletWebApplication.buildApplication(servletContext);
+
+        WebApplicationTemplateResolver resolver =
+            new WebApplicationTemplateResolver(webApp);
+        resolver.setTemplateMode(TemplateMode.HTML);
+        resolver.setPrefix("/WEB-INF/templates/");
+        resolver.setSuffix(".html");
+        resolver.setCacheable(false);   // set true in production
+
+        TemplateEngine engine = new TemplateEngine();
+        engine.setTemplateResolver(resolver);
+        return engine;
+    }
+}
+```
+
+### Controller → Servlet (forwarding to Thymeleaf)
+
+Spring MVC's `@Controller` glued the `TemplateEngine` to the HTTP pipeline automatically. Replace each `@Controller` method with a `@WebServlet` that resolves the template manually:
+
+```java
+// BEFORE: Spring MVC @Controller
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+@Controller
+public class TodoController {
+    @Autowired private TodoService todoService;
+
+    @GetMapping("/todos")
+    public String list(Model model) {
+        model.addAttribute("todos", todoService.findAll());
+        return "todos";
+    }
+
+    @PostMapping("/todos")
+    public String create(@ModelAttribute Todo todo) {
+        todoService.save(todo);
+        return "redirect:/todos";
+    }
+}
+
+// AFTER: Jakarta Servlet + Thymeleaf engine
+import jakarta.inject.Inject;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.WebContext;
+import org.thymeleaf.web.servlet.JakartaServletWebApplication;
+
+import java.io.IOException;
+
+@WebServlet("/todos")
+public class TodoController extends HttpServlet {
+
+    @Inject
+    private TemplateEngine templateEngine;
+
+    @Inject
+    private TodoService todoService;
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        resp.setContentType("text/html;charset=UTF-8");
+
+        JakartaServletWebApplication webApp =
+            JakartaServletWebApplication.buildApplication(req.getServletContext());
+        WebContext ctx = new WebContext(
+            webApp.buildExchange(req, resp), req.getLocale());
+        ctx.setVariable("todos", todoService.findAll());
+
+        templateEngine.process("todos", ctx, resp.getWriter());
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        Todo todo = new Todo();
+        todo.setTitle(req.getParameter("title"));
+        todoService.save(todo);
+        resp.sendRedirect(req.getContextPath() + "/todos");
+    }
+}
+```
+
+### Template file location
+
+Move templates from Spring Boot's classpath location to the WAR's `webapp` directory:
+
+```
+# BEFORE (Spring Boot — classpath)
+src/main/resources/templates/todos.html
+
+# AFTER (Liberty WAR)
+src/main/webapp/WEB-INF/templates/todos.html
+```
+
+### Spring-specific Thymeleaf features to remove
+
+The following Thymeleaf features depend on Spring and **must be removed or replaced**:
+
+| Spring-Thymeleaf feature | What to do |
+|---|---|
+| `th:action="@{...}"` with Spring CSRF | Replace with plain `<form action="...">` — remove the hidden CSRF input entirely |
+| `sec:authorize="..."` (Spring Security dialect) | Remove — implement access control at the Servlet level or in CDI beans |
+| `#mvc.url(...)` expression | Replace with hard-coded or `contextPath`-relative URLs |
+| `#authentication` expression | Remove — use a session attribute or CDI `@SessionScoped` bean instead |
+| `th:errors` / `th:object` bound to Spring form objects | Replace with manual `ctx.setVariable(...)` + EL `${fieldError}` pattern |
+| Spring's `@{...}` link URL expressions | These work without Spring; only the CSRF token injection inside them needs removing |
+
+> **Note:** Standard Thymeleaf expressions (`${...}`, `th:text`, `th:each`, `th:if`, `th:unless`, `th:fragment`, `th:replace`, `th:include`, layout dialect) work without Spring — no changes needed.
+
+---
+
 ## Scenario B — Thymeleaf without Spring MVC (`@Controller`) → JSP + JSTL
 
 Use this path when Thymeleaf templates are present but the controllers are `@RestController` (or Thymeleaf was used as a standalone renderer outside Spring MVC). The default replacement is **JSP + JSTL** — it is the closest Thymeleaf equivalent in syntax and requires no extra dependencies beyond the `pages-4.0` Liberty feature.
@@ -465,7 +672,7 @@ If the app needs CSRF protection on Liberty, enable the `appSecurity-6.0` featur
 
 ## REST-only (`@RestController` → JAX-RS + JSON-B)
 
-If the app uses only `@RestController` — no `Model`, no templates, no server-rendered HTML — skip Options A and B entirely. The migration is handled in [`code.md`](code.md) via the standard JAX-RS resource pattern. No frontend module action is needed beyond moving any static assets.
+If the app uses only `@RestController` — no `Model`, no templates, no server-rendered HTML — skip Options A, B, and C entirely. The migration is handled in [`code.md`](code.md) via the standard JAX-RS resource pattern. No frontend module action is needed beyond moving any static assets.
 
 ---
 
@@ -478,3 +685,7 @@ If the app uses only `@RestController` — no `Model`, no templates, no server-r
 - **EL scope**: Faces EL (`#{...}`) resolves CDI beans. Spring's `${...}` SpEL does not apply
 - **JSP requires `pages-4.0`** feature in `server.xml`; ensure the feature is declared
 - **Context root**: Liberty WAR context root defaults to `/<artifactId>`. Set `contextRoot="/"` in `server.xml` if needed
+- **Thymeleaf (Option C)**: `thymeleaf-spring6` and all other `thymeleaf-extras-spring*` JARs must be **removed** — they will cause `NoClassDefFoundError` at startup because Spring classes are absent
+- **Thymeleaf (Option C)**: The `WebContext` constructor changed in Thymeleaf 3.1 — it now requires a `JakartaServletWebApplication`-built exchange object; the old `(request, response, servletContext)` constructor is removed
+- **Thymeleaf (Option C)**: CDI injection (`@Inject`) does not work in plain `HttpServlet` unless the WAR has a `beans.xml` with `bean-discovery-mode="all"` or the servlet is annotated with `@Dependent` / extended from a CDI-aware base — ensure `src/main/webapp/WEB-INF/beans.xml` exists
+- **Thymeleaf (Option C)**: Spring Security dialect (`thymeleaf-extras-springsecurity6`) is incompatible — remove it and handle authorization in CDI or at the Servlet level

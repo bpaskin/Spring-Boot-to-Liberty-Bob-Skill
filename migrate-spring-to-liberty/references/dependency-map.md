@@ -193,7 +193,8 @@ For any other third-party library that Liberty must load directly (e.g. a custom
 
 | Spring Boot | Open Liberty |
 |---|---|
-| `spring-boot-starter-thymeleaf` | Jakarta Faces 4.1 (`faces-4.1` Liberty feature) — no Maven dep needed, Liberty provides impl |
+| `spring-boot-starter-thymeleaf` | **Option A (recommended):** Jakarta Faces 4.1 (`faces-4.1` Liberty feature) — no Maven dep needed, Liberty provides impl; see [frontend.md Option B](../modules/frontend.md) |
+| `spring-boot-starter-thymeleaf` | **Option B (keep Thymeleaf):** `org.thymeleaf:thymeleaf:3.1.3.RELEASE` (compile scope, bundled in WAR) — remove `thymeleaf-spring6`; wire `TemplateEngine` via CDI; see [frontend.md Option C](../modules/frontend.md) |
 | `spring-boot-starter-freemarker` | `org.freemarker:freemarker` (compile scope) |
 
 ## Scheduling / DI / Config
