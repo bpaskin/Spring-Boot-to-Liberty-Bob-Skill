@@ -60,6 +60,7 @@ ALLOWED_DECLARED_FEATURES = REQUIRED_CANONICAL_FEATURES | {
     "mpConfig-3.1",
     "mpHealth-4.0",
     "mpJwt-2.1",
+    "openidConnectClient-1.0",
     "mpMetrics-5.1",
     "mpOpenAPI-4.0",
     "pages-4.0",
@@ -82,6 +83,7 @@ DANGEROUS_SCHEMA_DECLARATION = re.compile(
     r'\s+value="(?:drop|drop-and-create|create|create-only)"\s*/?>'
 )
 DANGEROUS_TABLE_DECLARATION = re.compile(r'(?:createTables|dropTables)="true"')
+INLINE_LITERAL_PASSWORD = re.compile(r'password="(?!\$\{)[^"]+"')
 
 
 def markdown_files() -> list[Path]:
@@ -133,6 +135,11 @@ def validate_invariants(errors: list[str]) -> None:
                 f"{path.relative_to(REPO_ROOT)}: destructive Liberty table action "
                 "appears in an executable example; examples must default to false"
             )
+        if INLINE_LITERAL_PASSWORD.search(text):
+            errors.append(
+                f"{path.relative_to(REPO_ROOT)}: executable example contains an "
+                "inline literal password; externalize it through a variable"
+            )
 
     canonical = (
         SKILL_ROOT / "references" / "jakarta-ee11-liberty-features.md"
@@ -152,6 +159,21 @@ def validate_invariants(errors: list[str]) -> None:
     ):
         if required_text not in rehost:
             errors.append(f"rehost module is missing safety text {required_text!r}")
+
+    security = (SKILL_ROOT / "modules" / "security.md").read_text(encoding="utf-8")
+    for required_text in (
+        "SecurityFilterChain",
+        "Complex `@PreAuthorize`",
+        "`401`",
+        "`403`",
+        "CSRF",
+        "CORS",
+        "logout",
+        "mpJwt-2.1",
+        "openidConnectClient-1.0",
+    ):
+        if required_text not in security:
+            errors.append(f"security module is missing safety text {required_text!r}")
 
 
 def validate_links(errors: list[str]) -> None:
@@ -202,6 +224,7 @@ def fixture_text(root: Path, *, tests: bool | None = None) -> str:
 
 def classify_fixture(root: Path) -> dict[str, str | bool]:
     main_text = fixture_text(root, tests=False)
+    test_text = fixture_text(root, tests=True)
     build_text = "\n".join(
         path.read_text(encoding="utf-8")
         for path in sorted(root.iterdir())
@@ -253,10 +276,29 @@ def classify_fixture(root: Path) -> dict[str, str | bool]:
     spring_bootstrap = (
         "@SpringBootApplication" in main_text or "SpringApplication.run(" in main_text
     )
+    security_strategy_required = (
+        "spring-boot-starter-security" in build_text
+        or any(
+            marker in main_text
+            for marker in (
+                "SecurityFilterChain",
+                "@PreAuthorize",
+                "@PostAuthorize",
+                "oauth2ResourceServer",
+                "oauth2Login",
+            )
+        )
+    )
+    security_test_evidence = any(
+        marker in test_text.lower()
+        for marker in ("unauthorized", "forbidden", "csrf", "jwt", "status().is4")
+    )
 
     return {
         "build": build,
         "code": code,
+        "security_strategy_required": security_strategy_required,
+        "security_test_gap": security_strategy_required and not security_test_evidence,
         "frontend": frontend,
         "testing": testing,
         "coverage_risk": not bool(test_files),

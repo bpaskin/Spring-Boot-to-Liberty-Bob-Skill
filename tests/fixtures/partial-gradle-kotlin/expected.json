@@ -1,6 +1,8 @@
 {
   "build": "PARTIAL",
   "code": "PARTIAL",
+  "security_strategy_required": false,
+  "security_test_gap": false,
   "frontend": "SKIP",
   "testing": "SKIP",
   "coverage_risk": true,

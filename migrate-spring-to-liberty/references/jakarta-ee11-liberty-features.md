@@ -291,6 +291,8 @@ When multiple Liberty components (e.g., authentication cache + session cache) sh
 
 ## Security
 
+Feature selection alone does not migrate security. Use the dedicated [security module](../modules/security.md) to define the authentication mechanism, trust, role/group mapping, route policy, CSRF/CORS, sessions/logout, and negative tests before removing Spring Security.
+
 ### Declarative security on a JAX-RS resource
 
 ```java
@@ -322,12 +324,15 @@ Add to `server.xml`:
 </featureManager>
 
 <basicRegistry id="basic" realm="BasicRealm">
-    <user name="admin" password="adminpass"/>
+    <!-- Supply this through an approved environment/server variable or secret store. -->
+    <user name="admin" password="${env.BASIC_ADMIN_PASSWORD}"/>
     <group name="admin">
         <member name="admin"/>
     </group>
 </basicRegistry>
 ```
+
+For browser OIDC, choose either Jakarta Security's annotated OIDC mechanism with `appSecurity-6.0` or a Liberty-managed client with `openidConnectClient-1.0`; do not configure both for one entry point. For compatible JWT bearer APIs, use `mpJwt-2.1` with `mpConfig-3.1` and explicitly configure issuer, verification keys/JWKS, audience, algorithms, principal, and group claims.
 
 ---
 

@@ -6,8 +6,10 @@ If the contract selects retain Spring and rehost, log this module as `SKIP` and 
 
 Migrate all Java source code from Spring patterns to Jakarta EE 11 / CDI / JAX-RS equivalents.
 
-Load [references/annotation-map.md](../references/annotation-map.md) before starting. It contains the complete annotation mapping tables for DI, REST, Data, Security, Cache, Scheduling, and Lifecycle.
+Load [references/annotation-map.md](../references/annotation-map.md) before starting. It contains the annotation mapping tables for DI, REST, Data, Cache, Scheduling, and Lifecycle, plus security routing guidance.
 When Spring Data repository interfaces are present, also load [references/jakarta-data.md](../references/jakarta-data.md) and apply the repository strategy recorded in the migration contract.
+
+The dedicated [security module](security.md) owns `SecurityFilterChain`, authentication mechanisms, authorization expressions, CSRF/CORS, sessions, logout, trust, and security tests. Inventory security references here, but do not migrate or remove them in this module.
 
 ## What to do
 

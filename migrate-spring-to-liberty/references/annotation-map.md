@@ -124,14 +124,18 @@ Add `enterpriseBeansLite-4.0` or `enterpriseBeans-4.0` to `server.xml` when usin
 
 ## Security (Spring Security → MicroProfile JWT / Jakarta Security)
 
+Use the dedicated [security module](../modules/security.md) for the security contract, filter chains, authentication, authorization semantics, CSRF/CORS, sessions/logout, and negative tests. The entries below are candidate mappings, not permission to perform a bulk annotation rewrite.
+
 | Spring | Jakarta EE 11 / MicroProfile | Notes |
 |---|---|---|
-| `@Secured("ROLE_ADMIN")` | `@RolesAllowed("ADMIN")` (`jakarta.annotation.security.RolesAllowed`) | Enable `appSecurity-6.0` and design an authentication mechanism |
-| `@PreAuthorize("hasRole('ADMIN')")` | `@RolesAllowed("ADMIN")` | |
-| `@EnableWebSecurity` | Not needed | Configure in `server.xml` |
+| `@Secured("ROLE_ADMIN")` or a literal `hasRole('ADMIN')` | Candidate: `@RolesAllowed("ADMIN")` (`jakarta.annotation.security.RolesAllowed`) | Only after confirming role-prefix and identity-store group mapping; enable `appSecurity-6.0` and design authentication |
+| Complex `@PreAuthorize` / `@PostAuthorize` | No mechanical annotation mapping | Preserve boolean logic, arguments, ownership, bean calls, permission evaluators, and return-object checks in an explicit tested policy |
+| `SecurityFilterChain` / `@EnableWebSecurity` | Selected Jakarta Security/Liberty mechanism plus an explicit route policy | Inventory matcher order, default rule, login/challenge, filters, headers, CSRF, CORS, session, and logout behavior |
 | `@AuthenticationPrincipal` | `@Context SecurityContext` (JAX-RS) or `@Inject JsonWebToken` (MicroProfile JWT) | |
-| `spring.security.user.name` | `<basicRegistry>` in `server.xml` or LDAP/OIDC configuration | |
-| `spring.security.oauth2.resourceserver.jwt.issuer-uri` | `mp.jwt.verify.issuer` in `microprofile-config.properties` | Requires `mpJwt-2.1` feature |
+| `spring.security.user.*` | Reviewed Liberty basic/LDAP registry or Jakarta Security `IdentityStore` | Externalize credentials; test group-to-role mapping |
+| OAuth2 resource server JWT | MicroProfile JWT configuration when token/trust semantics are compatible | Requires `mpJwt-2.1` + `mpConfig-3.1`; explicitly map issuer, keys, audience, algorithms, principal, and groups |
+| OAuth2/OIDC browser client | Jakarta Security annotated OIDC with `appSecurity-6.0`, or Liberty `openidConnectClient-1.0` | Choose one owner and preserve redirects, claims, session, and logout behavior |
+| Spring CSRF/CORS/session/logout rules | No annotation mapping | Preserve through the security contract and applicable positive/negative tests before removing Spring Security |
 
 **Jakarta Security 4.0** provides declarative security for REST endpoints:
 ```java

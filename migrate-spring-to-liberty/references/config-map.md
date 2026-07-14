@@ -58,7 +58,7 @@ Datasource configuration moves from `application.properties` to `server.xml`. Th
     <jdbcDriver libraryRef="MySQLLib"/>
     <properties url="jdbc:mysql://localhost:3306/myapp"
                 user="root"
-                password="root"/>
+                password="${env.DB_PASSWORD}"/>
 </dataSource>
 ```
 
@@ -66,7 +66,7 @@ Datasource configuration moves from `application.properties` to `server.xml`. Th
 |---|---|
 | `spring.datasource.url` | `<properties url="..."/>` in `<dataSource/>` |
 | `spring.datasource.username` | `<properties user="..."/>` |
-| `spring.datasource.password` | `<properties password="..."/>` |
+| `spring.datasource.password` | `<properties password="${env.DB_PASSWORD}"/>` |
 | `spring.datasource.driver-class-name` | `<jdbcDriver libraryRef="..."/>` (driver auto-detected from URL) |
 
 **Injecting a DataSource into application code**: Liberty's `<dataSource>` is bound to JNDI — it is **not** a CDI bean and cannot be injected with `@Inject`. Use `@Resource` with the matching `jndiName` instead:
@@ -186,18 +186,20 @@ MicroProfile Config property sources in priority order (highest first):
 
 ## Security
 
+These are strategy candidates, not property renames. Follow the [security module](../modules/security.md), confirm the complete security contract, and test behavior before removing Spring configuration.
+
 | Spring Boot | Open Liberty (`server.xml`) |
 |---|---|
-| `spring.security.user.name` + `spring.security.user.password` | `<basicRegistry>` with `<user>` elements |
-| `spring.security.oauth2.client.*` | `<oidcClientProvider>` or `<oauth-2.0>` configuration |
-| `spring.security.oauth2.resourceserver.jwt.issuer-uri` | `mp.jwt.verify.issuer` in `microprofile-config.properties` |
+| `spring.security.user.name` + `spring.security.user.password` | Candidate: reviewed `<basicRegistry>` or another contracted identity source; externalize credentials |
+| `spring.security.oauth2.client.*` | Candidate: Jakarta Security annotated OIDC with `appSecurity-6.0`, or Liberty `<openidConnectClient>` with `openidConnectClient-1.0`; choose one owner |
+| `spring.security.oauth2.resourceserver.jwt.issuer-uri` | Candidate for compatible JWT bearer tokens: `mp.jwt.verify.issuer` plus complete trust/claim configuration in `microprofile-config.properties` |
 
 ### Basic registry example
 
 ```xml
 <basicRegistry id="basic" realm="BasicRealm">
-    <user name="admin" password="adminpassword"/>
-    <user name="user" password="userpassword"/>
+    <user name="admin" password="${env.BASIC_ADMIN_PASSWORD}"/>
+    <user name="user" password="${env.BASIC_USER_PASSWORD}"/>
     <group name="admins">
         <member name="admin"/>
     </group>

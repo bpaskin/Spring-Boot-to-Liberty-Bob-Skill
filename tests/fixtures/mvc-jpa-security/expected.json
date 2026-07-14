@@ -1,6 +1,8 @@
 {
   "build": "PASS",
   "code": "PASS",
+  "security_strategy_required": true,
+  "security_test_gap": true,
   "frontend": "PASS",
   "testing": "PASS",
   "coverage_risk": false,
