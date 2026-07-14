@@ -1,5 +1,18 @@
 # Jakarta EE 11 Specifications and Open Liberty Features
 
+## Contents
+
+- [Jakarta EE 11 BOM](#quickstart--jakarta-ee-11-bom)
+- [Core Profile APIs](#core-profile)
+- [Web Profile APIs](#web-profile-adds-to-core-profile)
+- [Platform APIs](#platform-adds-to-web-profile)
+- [CDI and persistence descriptors](#beansxml--cdi-bean-discovery)
+- [Distributed caching](#distributed-caching-with-jcache)
+- [Security](#security)
+- [MicroProfile 7](#microprofile-7--liberty-features)
+- [Typical feature sets](#typical-serverxml-feature-sets)
+- [Official references](#official-references)
+
 A reference mapping every Jakarta EE 11 specification to its Open Liberty feature name and Maven/Gradle API coordinates, organised by profile.
 
 Profile membership: **Platform ⊇ Web Profile ⊇ Core Profile**. All Web Profile specs are also in Platform. All Core Profile specs are in both.
@@ -34,9 +47,9 @@ Or use an all-in-one umbrella artifact:
 
 All umbrella artifacts use `<scope>provided</scope>` (Maven) or `compileOnly` (Gradle) — the Liberty runtime provides the implementation.
 
-In `server.xml`, use `jakartaee-11.0`, `webProfile-11.0`, or `coreProfile-11.0` as the matching convenience feature.
+In `server.xml`, use `jakartaee-11.0` or `webProfile-11.0` as a convenience feature, or select individual features for a smaller runtime surface. Open Liberty does not provide a `coreProfile-11.0` convenience feature.
 
-> **Tip**: Prefer `coreProfile-11.0` or `webProfile-11.0` over `jakartaee-11.0` in production — they pull in only the features you need and reduce startup time and memory footprint.
+> **Tip**: Prefer `webProfile-11.0` or a verified individual feature set when the application does not need the full platform.
 
 ---
 
@@ -359,7 +372,7 @@ MicroProfile is not part of Jakarta EE but is supported by Open Liberty alongsid
     <feature>jsonp-2.1</feature>
     <feature>cdi-4.1</feature>
     <feature>persistence-3.2</feature>
-    <feature>beanValidation-3.1</feature>
+    <feature>validation-3.1</feature>
     <feature>appSecurity-6.0</feature>
     <feature>mpJwt-2.1</feature>
 </featureManager>
@@ -394,7 +407,7 @@ MicroProfile is not part of Jakarta EE but is supported by Open Liberty alongsid
 
 | Resource | URL |
 |---|---|
-| Jakarta EE 11 Spec API Maven Coordinates | https://docs-draft-openlibertyio.mqj6zf7jocq.us-south.codeengine.appdomain.cloud/docs/latest/reference/jakarta-ee-11-spec-api-maven-coordinates.html |
+| Open Liberty Jakarta EE platform and feature names | https://openliberty.io/docs/latest/reference/platform/JakartaEE.html |
 | Jakarta EE 11 Specifications | https://jakarta.ee/specifications/platform/11/ |
 | Jakarta EE 11 API Javadoc | https://jakarta.ee/specifications/platform/11/apidocs/ |
 | Open Liberty Features (IBM Docs) | https://www.ibm.com/docs/en/was-liberty/base?topic=management-liberty-features |

@@ -130,13 +130,7 @@ Scan the original `pom.xml` for dependencies whose `groupId` does **not** start 
 
 > **Do NOT use `io.openliberty:openliberty-kernel`**. Always use `io.openliberty:openliberty-runtime` when a Liberty runtime artifact must be referenced. The Liberty server installation is managed by the `liberty-maven-plugin` via `server.xml` — do not add it as a `<dependency>`.
 >
-> **Resolve the latest Open Liberty version** by fetching the IBM DHE release index and parsing the highest version directory:
-> ```bash
-> curl -s https://public.dhe.ibm.com/ibmdl/export/pub/software/openliberty/runtime/release/ \
->   | grep -oP '(?<=href=")[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(?=/)' \
->   | sort -V | tail -1
-> ```
-> Use the version returned as the `<version>` value for `io.openliberty:openliberty-runtime` and for the `runtimeVersion` property in the `liberty-maven-plugin` configuration.
+> **Pin the Open Liberty runtime version.** Reuse the project's documented platform version when it supports Jakarta EE 11, or resolve a current supported release from official Open Liberty release metadata. Record the selected version in one Maven property, use it consistently, and verify it by running `liberty:install-feature`. Do not scrape an HTML directory listing or silently select a moving "latest" version during migration.
 
 **Add** the `liberty-maven-plugin`, `jandex-maven-plugin`, and update compiler/surefire:
 ```xml

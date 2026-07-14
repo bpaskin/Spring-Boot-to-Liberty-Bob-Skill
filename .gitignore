@@ -2,6 +2,10 @@
 .DS_Store
 Thumbs.db
 
+# Generated language caches
+__pycache__/
+*.py[cod]
+
 # AI agent session/local files — may contain tokens and secrets
 .claude/
 .cursor/

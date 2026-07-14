@@ -222,7 +222,7 @@ ClassCastException: class org.hibernate.SessionImpl cannot be cast to class java
 **Fix:**
 - A library on the classpath still uses `javax.*` APIs — this causes split-package conflicts with Liberty's `jakarta.*` implementation.
 - Run `grep -rn "import javax\." src/` and replace all `javax.persistence`, `javax.inject`, `javax.annotation`, `javax.transaction`, `javax.validation`, `javax.servlet` with `jakarta.*` equivalents.
-- Remove any transitive `javax.*` dependencies from the build file. Check with: `./mvnw dependency:tree | grep javax` or `./gradlew dependencies | grep javax`.
+- Inspect transitive `javax.*` dependencies and remove only incompatible legacy Java/Jakarta EE APIs. Preserve Java SE and intentional third-party APIs such as JCache; verify each dependency rather than filtering by namespace alone.
 
 ---
 
@@ -238,14 +238,16 @@ CWWKO0221E: TCP Channel defaultHttpEndpoint initialization did not succeed. The 
 # Find what is using the port
 lsof -i :9080
 
-# Kill it (replace PID)
-kill -9 <PID>
+# After identifying the owner and receiving confirmation, stop it gracefully
+kill <PID>
 ```
 
 Or change the Liberty port in `server.xml`:
 ```xml
 <httpEndpoint id="defaultHttpEndpoint" host="*" httpPort="9081" httpsPort="9444"/>
 ```
+
+Show the process identity and owning user before proposing termination. Ask for confirmation, then stop only the confirmed process gracefully. Never force-kill an unknown process merely to free a port.
 
 ---
 

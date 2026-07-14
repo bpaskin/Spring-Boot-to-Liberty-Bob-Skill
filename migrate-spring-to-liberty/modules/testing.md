@@ -102,7 +102,9 @@ class TodoServiceTest {
 
 ## Dependencies
 
-Ensure these are in the build file (should already be added by the build module):
+Resolve and record a MicroShed release that supports the Jakarta namespace used by the migrated application. MicroShed 0.9.2 is a `javax`-namespace baseline; do not copy that version blindly into a Jakarta EE 11 project. Pin the verified version as `MICROSHED_VERSION` and use the same value for Maven and Gradle.
+
+Ensure these are in the build file when the corresponding test pattern is used:
 
 **Maven:**
 ```xml
@@ -110,10 +112,10 @@ Ensure these are in the build file (should already be added by the build module)
 <dependency>
     <groupId>org.microshed</groupId>
     <artifactId>microshed-testing-liberty</artifactId>
-    <version>0.9.2</version>
+    <version>{MICROSHED_VERSION}</version>
     <scope>test</scope>
 </dependency>
-<!-- Hibernate Validator — Bean Validation implementation required by MicroShed -->
+<!-- Add a validation implementation only when tests execute validation outside Liberty. -->
 <dependency>
     <groupId>org.hibernate.validator</groupId>
     <artifactId>hibernate-validator</artifactId>
@@ -145,7 +147,7 @@ Ensure these are in the build file (should already be added by the build module)
 
 **Gradle:**
 ```groovy
-testImplementation 'org.microshed:microshed-testing-liberty:0.9.2'
+testImplementation 'org.microshed:microshed-testing-liberty:{MICROSHED_VERSION}'
 testImplementation 'org.hibernate.validator:hibernate-validator:9.0.1.Final'
 testImplementation 'org.junit.jupiter:junit-jupiter:5.12.2'
 testImplementation 'org.mockito:mockito-junit-jupiter:5.18.0'
@@ -155,7 +157,7 @@ testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
 ## Watch out
 
-- **Docker required for MicroShed**: MicroShed Testing uses Testcontainers to start a real Liberty container. Docker (or Podman) must be running on the test machine. If Docker is unavailable, start Liberty manually with `./mvnw liberty:dev` (or `./gradlew libertyDev`) before running tests, and use REST Assured against `localhost:9080`.
+- **Container runtime required for MicroShed**: MicroShed Testing uses Testcontainers to start a Liberty container. Docker or a correctly configured compatible runtime must be available. If it is unavailable, report the blocked integration tests instead of silently replacing them with a weaker test.
 - **Integration test naming**: Maven Failsafe runs tests ending in `IT` (e.g., `TodoResourceIT`). Unit tests (`TodoServiceTest`) run with Surefire. Keep these conventions for correct lifecycle separation.
 - **Test port**: MicroShed uses a random port managed by Testcontainers. Never hardcode `localhost:9080` in integration tests — use the injected client or `server.getBaseURL()`.
 - **No `@WebMvcTest` equivalent**: Use `@MicroShedTest` for all integration test types. For data-only tests, consider H2 in-memory with the `persistence-3.2` feature.
