@@ -1,0 +1,54 @@
+name: Online Liberty compatibility
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 7 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: online-liberty-compatibility
+  cancel-in-progress: false
+
+jobs:
+  golden-builds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: semeru
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: tests/e2e/maven-security-events/after/pom.xml
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile and test golden Maven and Gradle migrations
+        run: python migrate-spring-to-liberty/scripts/run_e2e.py --mode build
+
+  liberty-feature-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: semeru
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: tests/e2e/maven-security-events/after/pom.xml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Resolve pinned runtime/plugin/features and smoke-test Liberty
+        run: >-
+          python migrate-spring-to-liberty/scripts/run_e2e.py
+          --mode runtime
+          --scenario maven-security-events

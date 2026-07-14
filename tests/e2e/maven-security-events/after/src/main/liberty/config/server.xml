@@ -1,0 +1,12 @@
+<server description="Golden Maven migration">
+  <featureManager>
+    <feature>cdi-4.1</feature>
+    <feature>restfulWS-4.0</feature>
+    <feature>jsonb-3.0</feature>
+    <feature>jsonp-2.1</feature>
+    <feature>appSecurity-6.0</feature>
+    <feature>concurrent-3.1</feature>
+  </featureManager>
+  <httpEndpoint id="defaultHttpEndpoint" host="*" httpPort="19080" httpsPort="19443"/>
+  <webApplication location="e2e.war" contextRoot="/e2e"/>
+</server>

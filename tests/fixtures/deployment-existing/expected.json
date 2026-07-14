@@ -1,0 +1,13 @@
+{
+  "build": "PASS",
+  "code": "PASS",
+  "async_event_strategy_required": false,
+  "deployment_artifacts_present": true,
+  "security_strategy_required": false,
+  "security_test_gap": false,
+  "frontend": "SKIP",
+  "testing": "SKIP",
+  "coverage_risk": true,
+  "repository_strategy_required": false,
+  "rehost_candidate": false
+}

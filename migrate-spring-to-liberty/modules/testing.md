@@ -4,6 +4,8 @@ Follow the shared [migration ledger and transaction protocol](../references/migr
 
 Preserve every existing test and add only the integration coverage needed to verify behavior on Liberty. Treat an application with no tests as an explicit coverage risk rather than silently declaring the module complete.
 
+When the security gate runs, preserve and execute the authorization, authentication, CSRF, CORS, session, and logout matrix defined by [the security module](security.md). This module supplies the test harness; it must not narrow or reinterpret that security contract.
+
 Apply the contract scope before changing tests:
 
 - **Complete or staged rewrite**: migrate Spring-specific test infrastructure only for the rewritten slice, using the guidance below.

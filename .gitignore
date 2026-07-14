@@ -6,6 +6,11 @@ Thumbs.db
 __pycache__/
 *.py[cod]
 
+# Build outputs from executable migration evaluations
+**/target/
+**/build/
+**/.gradle/
+
 # AI agent session/local files — may contain tokens and secrets
 .claude/
 .cursor/

@@ -1,6 +1,10 @@
 {
   "build": "PASS",
   "code": "PASS",
+  "async_event_strategy_required": false,
+  "deployment_artifacts_present": false,
+  "security_strategy_required": true,
+  "security_test_gap": true,
   "frontend": "PASS",
   "testing": "PASS",
   "coverage_risk": false,

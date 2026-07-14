@@ -19,4 +19,6 @@ jobs:
       - name: Validate skill structure, safety invariants, and evaluation fixtures
         run: |
           python -m py_compile migrate-spring-to-liberty/scripts/validate_skill.py
+          python -m py_compile migrate-spring-to-liberty/scripts/run_e2e.py
           python migrate-spring-to-liberty/scripts/validate_skill.py
+          python migrate-spring-to-liberty/scripts/run_e2e.py --mode static

@@ -83,7 +83,7 @@ Copy `db2jcc4.jar` (and `db2jcc_license_cu.jar` if required) to `<server_name>/l
 <dataSource id="DefaultDataSource" jndiName="jdbc/myapp">
     <jdbcDriver libraryRef="DB2Lib"/>
     <properties.db2.jcc serverName="localhost" portNumber="50000"
-                        databaseName="myapp" user="db2user" password="db2pass"/>
+                        databaseName="myapp" user="${env.DB2_USER}" password="${env.DB2_PASSWORD}"/>
 </dataSource>
 ```
 
@@ -153,7 +153,7 @@ Copy `ojdbc11.jar` to `<server_name>/lib/oracle/`.
 <dataSource id="DefaultDataSource" jndiName="jdbc/myapp">
     <jdbcDriver libraryRef="OracleLib"/>
     <properties.oracle URL="jdbc:oracle:thin:@localhost:1521:ORCL"
-                       user="appuser" password="apppass"/>
+                       user="${env.POSTGRES_USER}" password="${env.POSTGRES_PASSWORD}"/>
 </dataSource>
 ```
 
@@ -172,7 +172,7 @@ Copy `postgresql-{version}.jar` to `<server_name>/lib/postgresql/`.
 <dataSource id="DefaultDataSource" jndiName="jdbc/myapp">
     <jdbcDriver libraryRef="PostgreSQLLib"/>
     <properties.postgresql serverName="localhost" portNumber="5432"
-                           databaseName="myapp" user="user" password="pass"/>
+                           databaseName="myapp" user="${env.MYSQL_USER}" password="${env.MYSQL_PASSWORD}"/>
 </dataSource>
 ```
 

@@ -1,0 +1,21 @@
+plugins {
+    id 'java'
+    id 'war'
+    id 'io.openliberty.tools.gradle.Liberty' version '4.0.0'
+}
+
+group = 'example'
+version = '1.0.0-SNAPSHOT'
+
+repositories { mavenCentral() }
+
+java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
+
+dependencies {
+    compileOnly 'jakarta.platform:jakarta.jakartaee-api:11.0.0'
+    libertyRuntime 'io.openliberty:openliberty-runtime:26.0.0.6'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.12.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.12.2'
+}
+
+tasks.named('test') { useJUnitPlatform() }

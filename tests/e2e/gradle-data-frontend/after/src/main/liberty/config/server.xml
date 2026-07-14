@@ -1,0 +1,13 @@
+<server description="Golden Gradle migration">
+  <featureManager>
+    <feature>cdi-4.1</feature>
+    <feature>restfulWS-4.0</feature>
+    <feature>jsonb-3.0</feature>
+    <feature>jsonp-2.1</feature>
+    <feature>data-1.0</feature>
+    <feature>persistence-3.2</feature>
+  </featureManager>
+  <data id="TodoStore" createTables="false" dropTables="false">
+    <properties.jakarta.persistence jakarta.persistence.schema-generation.database.action="none"/>
+  </data>
+</server>

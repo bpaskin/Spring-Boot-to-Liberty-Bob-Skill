@@ -4,7 +4,7 @@ Follow the shared [migration ledger and transaction protocol](../references/migr
 
 If the contract selects retain Spring and rehost, log this module as `SKIP` and stop. Preserve Spring MVC, Thymeleaf, templates, static assets, and CSRF integration for parity testing.
 
-Classify the view layer, load exactly one scenario reference, preserve browser behavior, and verify CSRF protection before removing Spring integration.
+Classify the view layer, load exactly one scenario reference, preserve browser behavior, and implement the CSRF contract established by the [security module](security.md) before removing Spring integration. Do not independently choose a new authentication, CSRF, CORS, session, or logout policy here.
 
 ## What to do
 
@@ -46,7 +46,7 @@ Before moving, check whether the build already copies classpath resources or whe
 
 Treat `_csrf`, Spring Security dialect attributes, or state-changing browser forms as evidence that CSRF protection is expected. For every non-idempotent browser route:
 
-1. Record the current token source, cookie/session behavior, header/field name, and failure response.
+1. Reuse the security module's record of the current token source, cookie/session behavior, header/field name, ignored routes, and failure response.
 2. Implement the replacement appropriate to the selected view stack.
 3. Add a positive test with a valid token.
 4. Add negative tests with a missing token and an invalid token; both must be rejected.
