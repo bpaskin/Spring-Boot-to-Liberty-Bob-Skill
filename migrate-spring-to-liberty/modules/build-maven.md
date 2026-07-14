@@ -1,5 +1,7 @@
 # Submodule: Build System (Maven)
 
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); preserve the baseline and make dependency/plugin changes idempotently.
+
 Maven-specific build migration steps. Called from [build.md](build.md).
 
 ## What to do

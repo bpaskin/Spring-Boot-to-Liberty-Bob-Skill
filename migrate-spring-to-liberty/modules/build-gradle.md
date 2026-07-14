@@ -1,5 +1,7 @@
 # Submodule: Build System (Gradle)
 
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); preserve the baseline and make dependency/plugin changes idempotently.
+
 Gradle-specific build migration steps. Called from [build.md](build.md).
 Covers both Groovy DSL (`build.gradle`) and Kotlin DSL (`build.gradle.kts`).
 

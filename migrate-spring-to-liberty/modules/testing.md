@@ -1,6 +1,8 @@
 # Module: Testing
 
-Migrate test infrastructure from Spring Boot Test to MicroShed Testing (integration tests against a running Liberty container) and standard JUnit 5 (unit tests).
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); preserve baseline test evidence and avoid duplicating test infrastructure on rerun.
+
+Preserve every existing test, migrate Spring-specific test infrastructure, and add only the integration coverage needed to verify behavior on Liberty. Treat an application with no tests as an explicit coverage risk rather than silently declaring the module complete.
 
 ## What to do
 
@@ -10,6 +12,9 @@ Migrate test infrastructure from Spring Boot Test to MicroShed Testing (integrat
 - [ ] Replace `@ActiveProfiles("test")` with Liberty server variables or MicroProfile Config overrides
 - [ ] Replace `@LocalServerPort` with MicroShed's `@RESTClient` injection
 - [ ] Move integration tests to `src/test/java` using the `IT` suffix (Failsafe convention)
+- [ ] Preserve and run plain JUnit tests even when they contain no Spring annotations
+- [ ] Compare test counts and failures with the baseline; distinguish pre-existing failures from regressions
+- [ ] If no tests exist, record `SKIP` plus a coverage gap and propose minimal smoke/security tests
 - [ ] Run tests: `./mvnw verify` (Maven) or `./gradlew test integrationTest` (Gradle)
 
 ## Key Conversions
@@ -57,15 +62,15 @@ public class TodoResourceIT {
 Create a shared container configuration class (once per project):
 
 ```java
-import org.microshed.testing.liberty.LibertyServerContainerConfiguration;
 import org.microshed.testing.SharedContainerConfiguration;
+import org.microshed.testing.testcontainers.ApplicationContainer;
 import org.testcontainers.junit.jupiter.Container;
 
 public class AppDeploymentConfig implements SharedContainerConfiguration {
 
     @Container
-    public static LibertyServerContainer server =
-        new LibertyServerContainer()
+    public static ApplicationContainer server =
+        new ApplicationContainer()
             .withAppContextRoot("/")
             .withReadinessPath("/health/ready"); // requires mpHealth feature
 }

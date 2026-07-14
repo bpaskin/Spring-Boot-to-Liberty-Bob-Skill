@@ -1,0 +1,7 @@
+{
+  "build": "PASS",
+  "code": "PASS",
+  "frontend": "SKIP",
+  "testing": "SKIP",
+  "coverage_risk": true
+}

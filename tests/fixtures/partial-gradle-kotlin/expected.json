@@ -1,0 +1,7 @@
+{
+  "build": "PARTIAL",
+  "code": "PARTIAL",
+  "frontend": "SKIP",
+  "testing": "SKIP",
+  "coverage_risk": true
+}

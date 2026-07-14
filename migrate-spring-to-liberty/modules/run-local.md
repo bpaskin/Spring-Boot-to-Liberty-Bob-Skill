@@ -1,19 +1,27 @@
 # Module: Run Locally & Fix Log Errors
 
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); record command, timeout, readiness evidence, logs, and cleanup result.
+
 Start the migrated application on Open Liberty locally, read the startup logs, and resolve any errors before declaring the migration complete.
 
 ## What to do
 
 - [ ] Start Liberty (dev mode recommended for iteration)
+- [ ] Record command, readiness URL, log paths, and timeout before starting
 - [ ] Confirm the server started successfully from the console output
 - [ ] If the server fails to start or the app fails to deploy, locate the log files
 - [ ] Triage each error in order: configuration → CDI wiring → JPA → JAX-RS → runtime
 - [ ] Fix each error, recompile, and restart until the app is clean
 - [ ] Verify the application responds to HTTP requests
+- [ ] Stop the owned process gracefully and verify it exited on every outcome
 
-## Starting Liberty
+## Time-bounded runtime lifecycle
 
-Use `liberty:dev` / `libertyDev` to create the server, deploy the application, and start with hot reload — all in one command. **Do not use `liberty:create`, `liberty:deploy`, `liberty:run`, or `liberty:start` separately.**
+Before starting, record the command, expected context root, readiness URL, log paths, and timeout in the migration ledger. Use 180 seconds unless the baseline or first-download conditions justify another explicit value. Confirm required ports are available and required external services are either running or documented as blockers.
+
+Use `liberty:dev` / `libertyDev` for the normal iterative path. Start it in a controllable foreground/PTY session, poll output in short intervals, and never wait silently past the recorded deadline.
+
+Use the detected wrapper when present and the installed Maven/Gradle launcher otherwise; the commands below show wrapper form.
 
 **Maven:**
 ```bash
@@ -33,15 +41,19 @@ Watch for this line in the console — it means the server is ready:
 
 Press `Enter` in dev-mode to run tests. Press `Ctrl+C` to stop.
 
-### Alternative: package then run
+Whether startup passes, fails, times out, or the task is interrupted, execute a cleanup step: send the foreground process `Ctrl+C`, wait for graceful shutdown, and verify the owned process exited. Never terminate an unverified process or force-kill merely to free a port.
 
-Build a self-contained runnable JAR/ZIP and start it without Maven/Gradle:
+### Non-interactive packaged alternative
+
+When dev mode cannot be controlled reliably, build a self-contained runnable artifact and run it in the same time-bounded foreground lifecycle:
 
 **Maven:**
 ```bash
 ./mvnw liberty:package -Dinclude=runnable
 java -jar target/<artifactId>.jar
 ```
+
+Derive the artifact name from the build output. Do not run dev mode and the packaged alternative simultaneously.
 
 ## Confirming Successful Startup
 
@@ -292,7 +304,7 @@ Remove or reduce trace specifications once the issue is resolved — trace loggi
 
 ## Watch out
 
-- **Always use dev mode**: `liberty:dev` / `libertyDev` creates the server, deploys the app, and starts with hot reload in one command. Do not use `liberty:create`, `liberty:deploy`, `liberty:run`, or `liberty:start`.
+- **Prefer dev mode for iteration**: use the packaged foreground alternative when dev mode cannot be controlled or reproduced. In both paths, enforce the recorded timeout and cleanup step.
 - **FFDC files**: Liberty creates an FFDC file for every unexpected exception. These contain the full stack trace and are the primary debugging artifact for errors that produce no console message.
 - **Liberty downloads on first run**: The first `liberty:dev` / `libertyDev` will download Open Liberty from Maven Central. This requires internet access and may take a minute. Subsequent runs use the cached download.
 - **Feature installation on first run**: Liberty installs declared features on first startup. Watch for `CWWKF0012I: The server installed the following features` — this is normal.

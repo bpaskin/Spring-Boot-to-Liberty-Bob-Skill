@@ -99,7 +99,7 @@ JPA configuration moves from `application.properties` to `persistence.xml`.
 
 | Spring Boot | `persistence.xml` property |
 |---|---|
-| `spring.jpa.hibernate.ddl-auto=update` | `jakarta.persistence.schema-generation.database.action=create` |
+| `spring.jpa.hibernate.ddl-auto=update` | No portable incremental equivalent; default the runtime action to `none` and use a reviewed schema-migration tool |
 | `spring.jpa.show-sql=true` | `hibernate.show_sql=true` |
 | `spring.jpa.properties.hibernate.dialect` | `hibernate.dialect` (usually auto-detected) |
 | `spring.jpa.properties.hibernate.format_sql` | `hibernate.format_sql=true` |
@@ -118,10 +118,12 @@ private String firstName;
 | Spring Boot `ddl-auto` | Jakarta EE `schema-generation.database.action` |
 |---|---|
 | `none` | `none` |
-| `validate` | `none` (validate via `validate` action in `persistence.xml`) |
-| `update` | `create` (closest equivalent — Jakarta EE has no incremental update) |
-| `create` | `drop-and-create` |
-| `create-drop` | `drop-and-create` + set cleanup strategy |
+| `validate` | `none`; add an explicit validation step because provider behavior is not equivalent |
+| `update` | No portable equivalent; use Flyway, Liquibase, or the existing migration mechanism |
+| `create` | Destructive intent; use `drop-and-create` only for the named disposable environment after backup/impact confirmation and explicit approval |
+| `create-drop` | Destructive intent; use `drop-and-create` only for the named disposable environment after backup/impact confirmation and explicit approval |
+
+The generated `persistence.xml` must use `none` until the migration contract records a different approved policy. Never infer that a local-looking datasource is disposable.
 
 ## Logging
 

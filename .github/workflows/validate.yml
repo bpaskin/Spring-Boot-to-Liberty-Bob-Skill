@@ -16,5 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Validate skill structure, links, and migration invariants
-        run: python migrate-spring-to-liberty/scripts/validate_skill.py
+      - name: Validate skill structure, safety invariants, and evaluation fixtures
+        run: |
+          python -m py_compile migrate-spring-to-liberty/scripts/validate_skill.py
+          python migrate-spring-to-liberty/scripts/validate_skill.py

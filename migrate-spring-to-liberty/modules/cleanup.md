@@ -1,5 +1,7 @@
 # Module: Cleanup
 
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); do not remove artifacts excluded by a staged contract.
+
 Remove leftover Spring artifacts that survived the per-module migration: orphaned imports, unused dependencies, stale configuration, and the Spring Boot main class (if not already removed).
 
 ## What to do

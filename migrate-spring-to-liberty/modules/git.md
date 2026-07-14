@@ -1,6 +1,8 @@
 # Module: Git / Branch Management
 
-**Optional module.** Set up an isolated migration branch before making changes, and commit + open a draft PR after the migration is verified. Requires user confirmation at every step.
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md).
+
+**Optional module.** Apply the branch choice already approved in the migration contract, then commit or publish only after separate explicit approval.
 
 ## Prerequisites
 
@@ -19,13 +21,13 @@ If this fails, **skip this module entirely** — inform the user that git manage
 - [ ] Verify the project is a git repository
 - [ ] Inspect the current branch, default branch, remotes, and working-tree status
 - [ ] Ensure agent session files are excluded from version control
-- [ ] Determine the next run number from existing branches
-- [ ] Propose branch name to the user and wait for confirmation
+- [ ] Verify the confirmed base and branch from the migration contract
 - [ ] Create the migration branch
+- [ ] Create `migration-report.md` with the baseline, contract, and all module states set to `NOT_STARTED`
 
 ### Post-migration (after verification)
 
-- [ ] Write `migration-report.md` at the repo root
+- [ ] Finalize the existing `migration-report.md`
 - [ ] Show the user a summary of changes and ask for confirmation before committing
 - [ ] Ask the user for confirmation before pushing and creating the draft PR
 
@@ -61,17 +63,17 @@ Before switching branches, run `git status --short` and show any existing change
 
 Determine the repository's default branch from `origin/HEAD` when available; otherwise use the current branch and tell the user. Do not assume the default branch is `main`.
 
-Determine the next run number from existing branches:
+If the contract requests a generated name, determine the next run number from existing branches before presenting the contract:
 
 ```bash
 git branch -a --list '*migration/run-*' | sort -t- -k3 -n | tail -1
 ```
 
-Propose the branch name to the user:
+The consolidated contract must show the exact proposal:
 
 > I'll create branch `migration/run-XX` from `<detected-base-branch>`. The working tree is `<clean/dirty summary>`. OK, or do you prefer a different base or branch name?
 
-Wait for the user to confirm or provide a custom name. Then create the branch:
+After the user confirms the contract, create the branch without asking the same question again:
 
 ```bash
 git switch <confirmed-base-branch>
@@ -79,6 +81,8 @@ git switch -c <confirmed-branch-name>
 ```
 
 Where `XX` is the next sequential number (zero-padded to two digits). If no prior branches exist, start with `migration/run-01`.
+
+Create `migration-report.md` immediately after branch creation. Record the baseline results, every contract decision, pre-existing worktree changes, and the module ledger. Update this same file after each module so an interrupted migration can resume from evidence rather than memory.
 
 ## Commit
 

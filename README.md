@@ -16,7 +16,7 @@ Then open a Bob task in a Spring Boot project and ask:
 Analyze this Spring Boot application for a complete migration to Jakarta EE 11 on Open Liberty. Do not change files until you show the migration inventory and I choose the scope.
 ```
 
-The skill first inventories the build, Java APIs, configuration, views, tests, security, and operational requirements. It then pauses for scope and workflow decisions before changing the project.
+The skill first inventories the build, Java APIs, configuration, views, tests, security, and operational requirements. It then records a read-only baseline and one consolidated migration contract before changing the project.
 
 ## Compatibility
 
@@ -26,7 +26,7 @@ The skill first inventories the build, Java APIs, configuration, views, tests, s
 | Java | 17 minimum; LTS targets 17, 21, or 25 |
 | Open Liberty | A pinned release verified to install every selected feature |
 | MicroProfile | Optional capabilities selected from the application's actual usage |
-| Build tools | Maven Wrapper, Gradle Wrapper (Groovy or Kotlin DSL) |
+| Build tools | Maven or Gradle (wrappers preferred; installed launchers supported) |
 
 ## Important limitations
 
@@ -47,10 +47,10 @@ When activated, the skill follows six steps:
 The skill scans the project and presents a summary table covering:
 
 - **Build file** (`pom.xml` / `build.gradle` / `build.gradle.kts`) — Spring Boot version, starters, plugins
-- **Java source code** — Spring annotations (DI, REST, Data, Security, Scheduling)
+- **Java source code** — Spring imports, annotations, API calls, configuration, repositories, security, scheduling, and bootstrap code
 - **Configuration** — `application.properties` / `application.yml`, profiles
 - **View layer** — Thymeleaf / JSP templates, static resources, Model+View patterns
-- **Tests** — `@SpringBootTest`, `@WebMvcTest`, `@DataJpaTest`
+- **Tests** — every test source/dependency, including plain JUnit tests
 
 The user then chooses a migration scope:
 
@@ -63,9 +63,13 @@ MicroProfile complements Jakarta EE rather than replacing it. The skill detects 
 
 ---
 
-### Step 2 — Git branch (optional)
+### Step 2 — Baseline, migration contract, and optional Git branch
 
-If the project is a git repository, the skill proposes an isolated migration branch (`migration/run-01`, `migration/run-02`, …) created from `main`. Before committing, it scans for accidentally exposed secrets (hardcoded tokens, API keys, private keys) and ensures AI agent session directories (`.claude/`, `.cursor/`, `.copilot/`, etc.) are listed in `.gitignore`. All changes land in a single commit; a draft PR is opened against `main` as a permanent diff and discussion record. The user can decline and the skill proceeds without any git management.
+Before editing, the skill records the original build/test results, pre-existing worktree changes, application bootstrap, routes, views, datasource/schema behavior, security, external services, ports, and runtime constraints. Pre-existing failures remain separate from migration regressions.
+
+It then presents one migration contract with the applicable JDK, exact branch/base, view technology, datasource and non-destructive schema policy, security model, test runtime, and external-service assumptions. Confirmed choices are not asked again. `migration-report.md` becomes the durable baseline, contract, module ledger, and resume point.
+
+If Git isolation is selected, the exact branch choice from the contract is created from the detected base branch. Commit, push, and draft-PR actions still require separate explicit approval.
 
 ---
 
@@ -75,14 +79,14 @@ Each module runs only if its gate condition is met:
 
 | Module | Gate | What it does |
 |---|---|---|
-| **jdk** | ALWAYS — stops migration if the JDK is unsupported | Enforces the Jakarta EE 11 minimum of Java 17 and supports LTS targets 17, 21, and 25; asks the user to confirm `JAVA_VERSION`. |
-| **build** | Spring Boot build markers found in build file | Detects Maven or Gradle and delegates to the matching sub-module. **Maven**: removes Spring Boot parent, changes packaging to `war`, adds Jakarta EE 11 BOM + `liberty-maven-plugin` + `jandex-maven-plugin`, creates `server.xml`. **Gradle**: removes Spring plugins, applies `war` + Liberty Gradle plugin + `com.github.vlsi.jandex`, configures `providedCompile`. Both sub-modules scan for non-Spring runtime dependencies (JDBC drivers, MQ clients, etc.) and carry them forward. Migrates `application.properties` → `server.xml` + `microprofile-config.properties`. |
-| **code** | Spring annotations found in Java sources | Migrates all Java source: entities (`javax.persistence` → `jakarta.persistence`), repositories (Spring Data → CDI `@ApplicationScoped` + `EntityManager`), services (`@Service` → `@ApplicationScoped`), controllers (`@RestController` → JAX-RS `@Path`), DI (`@Autowired` → `@Inject`), config injection (`@Value` → `@ConfigProperty`), `@Bean` methods → CDI `@Produces`, `CommandLineRunner` → CDI `@Observes Startup`, removes `@SpringBootApplication` main class. Entity fields with Spring Boot snake_case column names are mapped with explicit `@Column(name="...")` annotations — EclipseLink has no equivalent naming strategy. `DataSource` is injected via `@Resource(lookup="jdbc/myapp")` (not `@Inject`) since Liberty's `<dataSource>` is JNDI-bound. |
-| **frontend** | Thymeleaf / JSP templates or static resources found | Asks the user to choose Jakarta Faces 4.1, Jakarta MVC 3.0 + Eclipse Krazo, or preserved Thymeleaf. Converts templates and controllers, moves static assets into the WAR, and replaces Spring CSRF integration with verified protection for the chosen target before removing Spring Security. |
-| **testing** | Spring test annotations found in test sources | Migrates integration tests to a Jakarta-compatible MicroShed release and unit tests to JUnit/Mockito; preserves test intent, uses `*IT` naming for integration tests, and adds validation dependencies only when tests execute validation outside Liberty. Requires a compatible container runtime for MicroShed. |
+| **jdk** | ALWAYS — stops migration if the JDK is unsupported | Enforces Java 17+ and applies the contract-selected LTS target 17, 21, or 25. |
+| **build** | Spring build markers, or mixed Spring/Liberty build state | Detects Maven/Gradle, handles complete and partial migrations idempotently, preserves non-Spring runtime dependencies, and migrates runtime configuration. |
+| **code** | Spring imports, API calls, TODOs, or mixed Spring/Jakarta code | Migrates the confirmed source slice while preserving transaction, security, persistence, scheduling, and configuration semantics. Schema generation defaults to `none`; destructive actions require a named environment, usable backup, exact impact, and explicit approval. |
+| **frontend** | Templates/assets or controller/view-return signals | Loads only the contract-selected Jakarta MVC, Faces, retained Thymeleaf, JSP/static, or REST path. Replaces and negative-tests CSRF protection before removing Spring integration. |
+| **testing** | Any tests/configuration, or no tests that must be reported | Preserves plain JUnit tests, migrates Spring tests where needed, compares counts/results with baseline, and records a coverage risk when no tests exist. |
 | **cleanup** | ALWAYS — runs after all other modules | Removes leftover Spring imports; converts only explicitly mapped Jakarta EE APIs from `javax.*` while preserving Java SE and third-party namespaces; removes unused Spring dependencies and stale configuration; creates `beans.xml` when CDI discovery needs it. |
-| **feature-scan** | ALWAYS — runs after cleanup | Scans migrated sources and config files for actual API usage (CDI, JAX-RS, JPA, MicroProfile, etc.) using the Feature Trigger Table; derives a minimal `<featureManager>` list; presents the proposed list to the user with rationale; updates `server.xml` only after confirmation. |
-| **run-local** | ALWAYS — runs after feature-scan | Starts Liberty in dev mode (`liberty:dev` / `libertyDev`), reads startup logs, triages and fixes errors across nine categories (feature conflicts, WAR not found, CDI wiring, JPA / DataSource, JAX-RS 404s, ClassNotFoundException, javax/jakarta split-package, port conflicts, JSON-B serialization), verifies the app responds to HTTP. |
+| **feature-scan** | ALWAYS — runs after cleanup | Derives and verifies a minimal feature set. It pauses only when a feature change exceeds the contract or may alter descriptor/reflection-driven behavior. |
+| **run-local** | ALWAYS — runs after feature-scan | Runs Liberty in a controlled foreground session with a readiness URL, timeout, log evidence, smoke tests, and guaranteed graceful cleanup; a packaged foreground run is available when dev mode is unsuitable. |
 
 After every module the skill runs a compile check with the project's wrapper when present, or the installed `mvn`/`gradle` command otherwise. It never advances to the next module with a broken build.
 
@@ -91,12 +95,15 @@ After every module the skill runs a compile check with the project's wrapper whe
 - Never deletes code it cannot migrate — leaves a `// TODO: Migration required — <reason>` comment instead
 - Documents every decision and trade-off
 - No silent changes — every file modification is intentional and traceable
+- Every module records `NOT_STARTED`, `IN_PROGRESS`, `PASS`, `PARTIAL`, `SKIP`, or `BLOCKED` and can resume idempotently
+- Every module captures its pre-diff, intended files, validation, and safe rollback boundary
+- Database schema actions default to non-destructive `none`
 
 ---
 
 ### Step 4 — Verify the migration
 
-Six ordered checks, each must pass before the next runs:
+Six ordered checks distinguish migration failures, baseline failures, and unavailable external dependencies (`BLOCKED`):
 
 | # | Check | Pass criteria |
 |---|---|---|
@@ -104,16 +111,16 @@ Six ordered checks, each must pass before the next runs:
 | 2 | No Spring deps | Zero `org.springframework` dependencies remaining in the build file |
 | 3 | Has Liberty | Liberty BOM / plugin and at least one Jakarta EE feature present |
 | 4 | Tests pass | All tests pass using MicroShed or Arquillian |
-| 5 | Starts up | `CWWKF0011I` message in console; app responds to HTTP; no errors in `messages.log` |
+| 5 | Starts up | Readiness within the recorded timeout; app responds; logs have no unresolved application errors; owned process stops cleanly |
 | 6 | No leftover templates | No Thymeleaf references remaining (unless intentionally kept) |
 
 ---
 
 ### Step 5 — Migration report (self-reflection)
 
-After verification the skill answers six self-reflection questions (what migrated cleanly, what required manual judgment, every `// TODO` left behind, any removed code, initial check failures and how they were fixed, missing skill mappings) and presents a structured `## Migration Report` covering:
+After verification the skill assigns the highest demonstrated evidence level: `ANALYZED`, `COMPILED`, `TESTED`, `RUNTIME_VERIFIED`, or `BEHAVIOR_PARITY_VERIFIED`. The report covers:
 
-- Migration scope, optional MicroProfile capabilities, modules completed, and checks passed
+- Baseline, migration contract, durable module ledger, resume points, scope, capabilities, and checks
 - Agent/model and token usage only when the runtime exposes reliable values
 - Changes by module (files changed, key changes)
 - Validation results table
@@ -131,7 +138,7 @@ Scans for accidentally exposed secrets before staging. Shows the staged summary 
 
 ## Reference files
 
-The skill ships four reference tables used internally during migration:
+The skill uses canonical mapping references plus conditionally loaded frontend and migration-state guidance:
 
 | Reference | Used during |
 |---|---|
@@ -139,6 +146,8 @@ The skill ships four reference tables used internally during migration:
 | [`references/annotation-map.md`](migrate-spring-to-liberty/references/annotation-map.md) | Code module — DI, REST, Data, Security, Scheduling, Cache, Lifecycle annotation mapping |
 | [`references/config-map.md`](migrate-spring-to-liberty/references/config-map.md) | Build module — `application.properties` property migration covering server, datasource, JPA, logging, profiles, CORS, cache, security, health, and static resources |
 | [`references/jakarta-ee11-liberty-features.md`](migrate-spring-to-liberty/references/jakarta-ee11-liberty-features.md) | Canonical Jakarta EE 11 and MicroProfile feature names, Maven/Gradle coordinates, profile membership, JCache provider guidance, security examples, and typical `<featureManager>` sets |
+| [`references/migration-ledger.md`](migrate-spring-to-liberty/references/migration-ledger.md) | Baseline, consolidated contract, module state, transaction boundaries, and resume protocol |
+| `references/frontend-*.md` | Loaded one at a time for Jakarta MVC, Faces, retained Thymeleaf, or JSP/REST paths |
 
 ---
 
@@ -151,11 +160,11 @@ The skill ships four reference tables used internally during migration:
 | [`modules/build-maven.md`](migrate-spring-to-liberty/modules/build-maven.md) | Maven-specific migration (`pom.xml`, `liberty-maven-plugin`, `jandex-maven-plugin`) |
 | [`modules/build-gradle.md`](migrate-spring-to-liberty/modules/build-gradle.md) | Gradle-specific migration (Groovy DSL and Kotlin DSL, Liberty Gradle plugin, Jandex) |
 | [`modules/code.md`](migrate-spring-to-liberty/modules/code.md) | Java source migration (entities, repositories, services, controllers, DI, lifecycle) |
-| [`modules/frontend.md`](migrate-spring-to-liberty/modules/frontend.md) | View-layer migration, static assets, and verified CSRF replacement |
+| [`modules/frontend.md`](migrate-spring-to-liberty/modules/frontend.md) | View-layer scenario router, static assets, and verified CSRF replacement |
 | [`modules/testing.md`](migrate-spring-to-liberty/modules/testing.md) | Jakarta-compatible MicroShed integration tests, JUnit 5, Mockito, and optional REST Assured |
 | [`modules/cleanup.md`](migrate-spring-to-liberty/modules/cleanup.md) | Leftover Spring imports, selective Jakarta namespace conversion, and CDI discovery |
 | [`modules/feature-scan.md`](migrate-spring-to-liberty/modules/feature-scan.md) | Minimal `<featureManager>` derivation and `server.xml` update |
-| [`modules/run-local.md`](migrate-spring-to-liberty/modules/run-local.md) | Liberty dev mode startup, log triage, nine error categories and fixes |
+| [`modules/run-local.md`](migrate-spring-to-liberty/modules/run-local.md) | Time-bounded Liberty startup, readiness/smoke evidence, log triage, and graceful cleanup |
 | [`modules/git.md`](migrate-spring-to-liberty/modules/git.md) | Optional git branch, secrets scan, commit, and draft PR workflow |
 
 ---
@@ -180,7 +189,7 @@ Before contributing an update, run:
 python3 migrate-spring-to-liberty/scripts/validate_skill.py
 ```
 
-The validator checks frontmatter, internal links, canonical Jakarta EE 11 feature declarations, known nonportable mappings, and security-critical wording. The same check runs in GitHub Actions.
+The validator checks frontmatter, internal links, canonical Jakarta EE 11 feature declarations, destructive schema examples, known nonportable mappings, security-critical wording, and four gate-classification fixtures. The same checks run in GitHub Actions.
 
 ---
 

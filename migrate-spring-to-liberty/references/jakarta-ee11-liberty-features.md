@@ -161,7 +161,7 @@ Enable the corresponding Liberty feature in `server.xml`:
     <persistence-unit name="myapp-pu" transaction-type="JTA">
         <jta-data-source>jdbc/myapp</jta-data-source>
         <properties>
-            <property name="jakarta.persistence.schema-generation.database.action" value="create"/>
+            <property name="jakarta.persistence.schema-generation.database.action" value="none"/>
         </properties>
     </persistence-unit>
 </persistence>
