@@ -1,5 +1,7 @@
 # Module: Build System
 
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); on rerun, update existing build/configuration entries instead of duplicating them.
+
 Migrate the build descriptor and configuration files from Spring Boot to Open Liberty with Jakarta EE 11.
 
 ## Instructions
@@ -70,7 +72,7 @@ Migrate Spring properties to Liberty/MicroProfile Config equivalents using confi
 - `server.port` → `<httpEndpoint httpPort="..."/>` in `server.xml`
 - `server.servlet.context-path` → `contextRoot` in `<webApplication .../>` or `microprofile-config.properties`
 - `spring.datasource.*` → `<dataSource .../>` + `<jdbcDriver .../>` in `server.xml`, or `%prod.` MicroProfile Config props
-- `spring.jpa.hibernate.ddl-auto` → standard `jakarta.persistence.schema-generation.database.action` in `persistence.xml`; preserve vendor-specific Hibernate properties only when Hibernate remains the selected provider
+- `spring.jpa.hibernate.ddl-auto` → record the current behavior in the contract, default `jakarta.persistence.schema-generation.database.action` to `none`, and use a reviewed migration tool when incremental schema change is required
 - `logging.level.*` → `<logging .../>` element in `server.xml`
 
 ### MicroProfile Config properties
@@ -97,3 +99,4 @@ Environment variable overrides follow MicroProfile's relaxed naming: `APP_CONTEX
 - **Naming strategy**: Spring Boot defaults to snake_case column naming (`firstName` → `first_name`). EclipseLink (the JPA provider on Liberty) preserves Java field names as-is and has no naming strategy equivalent. Add `@Column(name = "column_name")` to each entity field that needs an explicit column mapping.
 - **Build launcher**: If the project has `mvnw`/`gradlew`, always use `./mvnw` or `./gradlew`. Otherwise use an installed `mvn` or `gradle`, record that fallback in the migration report, and never generate a wrapper without the user's approval.
 - **Packaging**: Open Liberty applications are packaged as WAR files and deployed to the Liberty runtime. Derive the deployed filename from the actual Maven `finalName` or Gradle WAR archive name; do not hard-code `app.war` unless the build creates that exact artifact.
+- **Schema safety**: Never write `create`, `drop`, `create-only`, or `drop-and-create` into a generated descriptor without the explicit destructive-action gate defined by the migration contract.

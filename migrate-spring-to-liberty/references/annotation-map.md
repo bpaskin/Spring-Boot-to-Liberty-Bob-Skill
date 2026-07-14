@@ -87,7 +87,7 @@
 | `@Query("JPQL")` | `EntityManager.createQuery(...)` or `@NamedQuery` | JPQL is the same |
 | `@Modifying` | `EntityManager.createQuery(...).executeUpdate()` | |
 | `@EnableJpaRepositories` | Not needed | CDI + JPA auto-discovered via `persistence.xml` |
-| `spring.jpa.hibernate.ddl-auto` | `jakarta.persistence.schema-generation.database.action` in `persistence.xml` | Values: `create`, `drop-and-create`, `create-only`, `drop`, `none` |
+| `spring.jpa.hibernate.ddl-auto` | `jakarta.persistence.schema-generation.database.action` in `persistence.xml` | Default to `none`; `update` has no portable equivalent, and destructive values require an explicit environment/backup/impact approval gate |
 
 **JPA 3.2 naming strategy**: EclipseLink (the JPA provider on Liberty) preserves Java field names as-is — there is no naming strategy equivalent to Spring Boot's `SpringPhysicalNamingStrategy`. To match Spring Boot's snake_case column names, add `@Column` explicitly to each entity field:
 

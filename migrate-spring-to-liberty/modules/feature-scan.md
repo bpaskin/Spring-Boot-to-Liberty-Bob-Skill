@@ -1,5 +1,7 @@
 # Module: Feature Scan & server.xml Update
 
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); update an existing feature set rather than appending a second one.
+
 After all migration modules have compiled cleanly, scan the migrated Java sources and configuration files to derive the exact set of Open Liberty features the application needs. Replace the placeholder `jakartaee-11.0` / `microProfile-7.0` umbrella features with a precise, minimal feature list.
 
 Load [references/jakarta-ee11-liberty-features.md](../references/jakarta-ee11-liberty-features.md) before deriving the list. Treat it as the canonical mapping and verify uncertain feature names against the Open Liberty feature documentation.
@@ -186,7 +188,7 @@ Replace the umbrella feature block with the minimal computed set. The structure 
 </featureManager>
 ```
 
-Show the proposed `<featureManager>` block to the user with a short rationale for each feature (one line), then ask for confirmation before writing to `server.xml`.
+Show the proposed `<featureManager>` block with a short rationale for each feature (one line). If it follows the confirmed contract and only removes unused placeholder features, update `server.xml` as part of the authorized migration without another pause.
 
 > Here is the minimal feature set derived from scanning the migrated sources:
 >
@@ -197,9 +199,7 @@ Show the proposed `<featureManager>` block to the user with a short rationale fo
 > | `persistence-3.2` | `@Entity`, `persistence.xml` found |
 > | … | … |
 >
-> Shall I update `server.xml` with this list?
-
-Only write the file after the user confirms.
+Ask before writing only when the scan introduces a capability not covered by the contract, removes a feature that may be needed through descriptors/reflection, or changes a security/messaging/data behavior. Record the final feature evidence in the migration ledger.
 
 ## Step 4 — Install & Verify
 

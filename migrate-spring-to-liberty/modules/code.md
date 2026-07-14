@@ -1,5 +1,7 @@
 # Module: Code
 
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); migrate only the confirmed scope and resume from semantic evidence rather than annotation counts alone.
+
 Migrate all Java source code from Spring patterns to Jakarta EE 11 / CDI / JAX-RS equivalents.
 
 Load [references/annotation-map.md](../references/annotation-map.md) before starting. It contains the complete annotation mapping tables for DI, REST, Data, Security, Cache, Scheduling, and Lifecycle.
@@ -115,12 +117,14 @@ Create `src/main/resources/META-INF/persistence.xml` if it does not exist:
                                  https://jakarta.ee/xml/ns/persistence/persistence_3_2.xsd">
     <persistence-unit name="defaultPU" transaction-type="JTA">
         <properties>
-            <!-- Schema generation — equivalent to spring.jpa.hibernate.ddl-auto -->
-            <property name="jakarta.persistence.schema-generation.database.action" value="drop-and-create"/>
+            <!-- Non-destructive default. Use a reviewed migration tool for schema changes. -->
+            <property name="jakarta.persistence.schema-generation.database.action" value="none"/>
         </properties>
     </persistence-unit>
 </persistence>
 ```
+
+Do not translate `ddl-auto=create`, `create-drop`, or `update` into a destructive Jakarta Persistence action automatically. Record the existing behavior in the migration contract. Require the user to identify the target environment, confirm a usable backup, and approve the exact action before using `create`, `drop`, or `drop-and-create`. Prefer Flyway, Liquibase, or the project's existing reviewed schema-migration mechanism for durable environments.
 
 ## Service Layer
 
