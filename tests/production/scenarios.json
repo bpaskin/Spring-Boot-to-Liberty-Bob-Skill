@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "name": "postgres-xa-schema",
+      "fixture": "tests/fixtures/production-data-xa",
+      "required_markers": ["org.postgresql", "PGXADataSource", "spring.datasource.orders", "spring.datasource.billing", "flyway", "liquibase", "rollbackAfterSecondResourceFailure"],
+      "positive_cases": [
+        {"name": "commit-both-resources", "trigger": "write one business transaction to both PostgreSQL datasources", "expected": "both durable writes commit exactly once"},
+        {"name": "schema-tools-idempotent", "trigger": "start twice from the supported schema baseline", "expected": "Flyway/Liquibase report the same reviewed schema without destructive action"}
+      ],
+      "failure_cases": [
+        {"name": "bad-database-credentials", "trigger": "supply invalid credentials", "expected": "readiness fails without leaking the secret and recovers after correction"},
+        {"name": "pool-exhaustion", "trigger": "hold every configured connection", "expected": "bounded timeout and observable failure rather than an unbounded hang"},
+        {"name": "xa-second-resource-failure", "trigger": "fail the second enlisted resource before completion", "expected": "no partial committed business state and recovery is visible"},
+        {"name": "xa-restart-recovery", "trigger": "restart Liberty with an in-doubt transaction", "expected": "transaction recovery resolves or reports the exact heuristic state"},
+        {"name": "schema-checksum-mismatch", "trigger": "alter an already-applied migration checksum", "expected": "startup fails closed with no automatic repair"}
+      ]
+    },
+    {
+      "name": "oidc-observability",
+      "fixture": "tests/fixtures/production-identity-observability",
+      "required_markers": ["oauth2-resource-server", "actuator", "micrometer", "opentelemetry", "wrongIssuer", "exporterUnavailable"],
+      "positive_cases": [
+        {"name": "valid-token-and-telemetry", "trigger": "call a protected endpoint with a valid token while the telemetry backend is available", "expected": "authorized response plus correlated metric, trace, and log evidence"}
+      ],
+      "failure_cases": [
+        {"name": "expired-token", "trigger": "use an expired access token", "expected": "401 with no protected response body"},
+        {"name": "wrong-issuer-audience", "trigger": "use correctly signed tokens with wrong issuer and audience", "expected": "both tokens are rejected"},
+        {"name": "jwks-outage-rotation", "trigger": "rotate signing keys while JWKS is temporarily unavailable", "expected": "cached-key policy is bounded and unknown keys fail closed"},
+        {"name": "insufficient-role", "trigger": "use a valid token without the required group", "expected": "403 rather than 401 or success"},
+        {"name": "dependency-readiness-down", "trigger": "make a required downstream dependency unavailable", "expected": "readiness becomes unhealthy while liveness follows the contract"},
+        {"name": "telemetry-exporter-down", "trigger": "stop the telemetry exporter", "expected": "application behavior follows the loss/backpressure contract without unbounded memory growth"}
+      ]
+    },
+    {
+      "name": "kafka-deployment",
+      "fixture": "tests/fixtures/production-kafka-deployment",
+      "required_markers": ["spring-kafka", "@KafkaListener", "Dockerfile", "/health/ready", "poisonRecord", "brokerUnavailable"],
+      "positive_cases": [
+        {"name": "ordered-publish-consume", "trigger": "publish keyed records through the deployed application", "expected": "payload, headers, key, partition ordering, acknowledgment, and side effects match"}
+      ],
+      "failure_cases": [
+        {"name": "duplicate-delivery", "trigger": "redeliver an acknowledged-boundary record", "expected": "idempotent side effects with duplicate evidence"},
+        {"name": "poison-record-dlq", "trigger": "publish an incompatible payload", "expected": "bounded retries and the contracted dead-letter/recovery result"},
+        {"name": "broker-unavailable", "trigger": "stop Kafka during consumption", "expected": "bounded failure, readiness transition, reconnect, and no silent loss"},
+        {"name": "consumer-rebalance", "trigger": "scale the deployment during in-flight processing", "expected": "partition handoff preserves the acknowledgment and ordering contract"},
+        {"name": "termination-drain", "trigger": "terminate a pod with in-flight messages", "expected": "graceful drain or explicitly recorded redelivery within the grace period"},
+        {"name": "bad-secret-rollout", "trigger": "deploy invalid broker credentials", "expected": "rollout remains unready and rolls back without exposing credentials"}
+      ]
+    }
+  ]
+}

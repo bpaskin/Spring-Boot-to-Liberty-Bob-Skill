@@ -1,0 +1,34 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.5'
+    id 'io.openliberty.tools.gradle.Liberty' version '4.0.0'
+}
+
+group = 'example'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories { mavenCentral() }
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web:4.0.5'
+    libertyRuntime 'io.openliberty:openliberty-runtime:26.0.0.6'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:4.0.5'
+}
+
+bootJar { archiveFileName = 'rehost-boot4.jar' }
+tasks.named('test') { useJUnitPlatform() }
+
+liberty {
+    server {
+        name = 'defaultServer'
+        serverXmlFile = file('src/main/liberty/config/server.xml')
+        deploy {
+            apps = [bootJar]
+        }
+    }
+}

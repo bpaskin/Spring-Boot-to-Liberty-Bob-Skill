@@ -150,7 +150,7 @@ Scan the original `pom.xml` for dependencies whose `groupId` does **not** start 
         <plugin>
             <groupId>io.smallrye</groupId>
             <artifactId>jandex-maven-plugin</artifactId>
-            <version>3.6</version>
+            <version>3.6.0</version>
             <executions>
                 <execution>
                     <id>make-index</id>

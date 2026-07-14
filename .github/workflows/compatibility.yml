@@ -13,7 +13,21 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  golden-builds:
+  contract-evaluations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate static contracts and evaluation manifests
+        run: |
+          python migrate-spring-to-liberty/scripts/validate_skill.py
+          python migrate-spring-to-liberty/scripts/run_agent_eval.py --mode static
+          python migrate-spring-to-liberty/scripts/run_production_evals.py --mode static
+
+  golden-rewrites:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -22,33 +36,68 @@ jobs:
         with:
           distribution: semeru
           java-version: "21"
-          cache: maven
-          cache-dependency-path: tests/e2e/maven-security-events/after/pom.xml
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.3.1"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Compile and test golden Maven and Gradle migrations
-        run: python migrate-spring-to-liberty/scripts/run_e2e.py --mode build
+      - name: Compile and test full Spring-removal migrations
+        run: >-
+          python migrate-spring-to-liberty/scripts/run_e2e.py
+          --mode build
+          --scenario maven-security-events
+          --scenario gradle-data-frontend
 
-  liberty-feature-and-smoke:
+  rehosting-matrix:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ["17", "21", "25"]
+        scenario: [maven-rehost-boot3, gradle-rehost-boot4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: semeru
+          java-version: ${{ matrix.java }}
+      - uses: gradle/actions/setup-gradle@v4
+        if: startsWith(matrix.scenario, 'gradle-')
+        with:
+          gradle-version: "9.3.1"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build rehosting candidate
+        run: >-
+          python migrate-spring-to-liberty/scripts/run_e2e.py
+          --mode build
+          --scenario ${{ matrix.scenario }}
+
+  liberty-runtime-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [maven-security-events, maven-rehost-boot3, gradle-rehost-boot4]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: semeru
           java-version: "21"
-          cache: maven
-          cache-dependency-path: tests/e2e/maven-security-events/after/pom.xml
+      - uses: gradle/actions/setup-gradle@v4
+        if: startsWith(matrix.scenario, 'gradle-')
+        with:
+          gradle-version: "9.3.1"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Resolve pinned runtime/plugin/features and smoke-test Liberty
+      - name: Resolve runtime/features and run HTTP smoke probes
         run: >-
           python migrate-spring-to-liberty/scripts/run_e2e.py
           --mode runtime
-          --scenario maven-security-events
+          --scenario ${{ matrix.scenario }}

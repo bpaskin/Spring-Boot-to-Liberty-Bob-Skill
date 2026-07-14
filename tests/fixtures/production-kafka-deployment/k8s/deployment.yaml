@@ -1,0 +1,10 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: kafka-app}
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          readinessProbe:
+            httpGet: {path: /health/ready, port: 9080}

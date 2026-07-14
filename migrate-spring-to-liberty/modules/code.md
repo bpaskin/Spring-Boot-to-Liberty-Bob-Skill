@@ -9,7 +9,7 @@ Migrate all Java source code from Spring patterns to Jakarta EE 11 / CDI / JAX-R
 Load [references/annotation-map.md](../references/annotation-map.md) before starting. It contains the annotation mapping tables for DI, REST, Data, Cache, Scheduling, and Lifecycle, plus security routing guidance.
 When Spring Data repository interfaces are present, also load [references/jakarta-data.md](../references/jakarta-data.md) and apply the repository strategy recorded in the migration contract.
 
-The dedicated [security module](security.md) owns `SecurityFilterChain`, authentication mechanisms, authorization expressions, CSRF/CORS, sessions, logout, trust, and security tests. The [async/events module](async-events.md) owns `@Async`, executor configuration, application events, non-default transaction semantics, Spring Retry/listeners, and their failure tests. Inventory these references here, but do not migrate or remove them in this module.
+The dedicated [complexity preflight](complexity-gate.md) owns non-mechanical-stack routing. The [security module](security.md) owns `SecurityFilterChain`, authentication mechanisms, authorization expressions, CSRF/CORS, sessions, logout, trust, and security tests. The [async/events module](async-events.md) owns `@Async`, executor configuration, application events, non-default transaction semantics, Spring Retry/listeners, and their failure tests. The [messaging module](messaging.md) owns broker and Spring Integration flows. The [batch/scheduling module](batch-scheduling.md) owns Spring Batch, Quartz, and scheduling semantics. Inventory these references here, but do not migrate or remove them in this module.
 
 ## What to do
 
@@ -21,7 +21,7 @@ The dedicated [security module](security.md) owns `SecurityFilterChain`, authent
 - [ ] Migrate configuration injection (`@Value` → `@ConfigProperty`)
 - [ ] Migrate view layer: `Model.addAttribute()` → Jakarta MVC `Models`, Jakarta Faces backing bean, or JAX-RS response
 - [ ] Remove `@SpringBootApplication` main class
-- [ ] Replace Spring's `@Transactional` with `jakarta.transaction.Transactional`
+- [ ] Replace only default-compatible Spring `@Transactional` usage here; route non-default propagation/isolation/timeout semantics to async/events
 - [ ] Compile: `./mvnw clean compile -DskipTests` (Maven) or `./gradlew clean compileJava -x test` (Gradle)
 
 Use the annotation-map.md reference for the full mapping. Below are the key patterns with before/after examples.

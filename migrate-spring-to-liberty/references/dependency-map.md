@@ -24,15 +24,16 @@
 | `spring-boot-starter-security` | `jakarta.platform:jakarta.jakartaee-api:11.0.0` + `appSecurity-6.0` feature + an explicitly designed registry, OIDC, or JWT configuration |
 | `spring-boot-starter-actuator` | `org.eclipse.microprofile:microprofile:7.0` (provided) + `mpHealth-4.0` + `mpMetrics-5.1` features |
 | `spring-boot-starter-cache` | JCache provider dependency (e.g., `com.hazelcast:hazelcast` or `org.ehcache:ehcache`) + `<cachingProvider>` in `server.xml` — **no Liberty `jcache` feature needed** |
-| `spring-boot-starter-ws` / `javax.xml.bind:jaxb-api` / `jakarta.xml.bind:jakarta.xml.bind-api` | `jakarta.xml.bind:jakarta.xml.bind-api:4.0.5` (provided) + `xmlBinding-4.0` feature |
+| `spring-boot-starter-web-services` / Spring-WS | No dependency-only conversion. Inventory WSDL/XSD contracts, SOAP versions/actions/faults, endpoint dispatch, interceptors, WS-Security, MTOM, and clients; select Jakarta XML Web Services `xmlWS-4.0`, retain Spring-WS, or stage the slice. |
+| `javax.xml.bind:jaxb-api` / `jakarta.xml.bind:jakarta.xml.bind-api` used only for XML binding | `jakarta.xml.bind:jakarta.xml.bind-api:4.0.5` (provided) + `xmlBinding-4.0` feature |
 | `spring-boot-starter-test` | `org.microshed:microshed-testing-liberty` + `org.junit.jupiter:junit-jupiter` |
 
 ## Data / Persistence
 
 | Spring Boot | Open Liberty |
 |---|---|
-| `spring-boot-starter-data-mongodb` | `com.mongodb:mongodb-driver-sync` + `mongoDBClient` Liberty feature (or CDI bean) |
-| `spring-boot-starter-data-redis` | Lettuce or Jedis client + configure `<connectionFactory>` in `server.xml` |
+| `spring-boot-starter-data-mongodb` | Prefer a current MongoDB driver managed by a CDI producer and MicroProfile Config. Liberty `mongodb-2.0` is stabilized, not the default strategic choice; use it only when its older server-managed model is deliberate and compatible. |
+| `spring-boot-starter-data-redis` | Retain a compatible Lettuce/Jedis/Redisson client and create a CDI producer/lifecycle configuration from MicroProfile Config, or select a verified provider integration. A generic Liberty `<connectionFactory>` is a JCA resource and is not a Redis configuration by itself. |
 | `spring-boot-starter-jdbc` | JDBC driver JAR in WAR + `<dataSource>` in `server.xml` |
 | `h2` (test DB) | `com.h2database:h2` (test scope) + `jdbc-4.3` feature |
 | `postgresql` | `org.postgresql:postgresql` (runtime) + `<dataSource>` in `server.xml` |
@@ -153,7 +154,7 @@ Copy `ojdbc11.jar` to `<server_name>/lib/oracle/`.
 <dataSource id="DefaultDataSource" jndiName="jdbc/myapp">
     <jdbcDriver libraryRef="OracleLib"/>
     <properties.oracle URL="jdbc:oracle:thin:@localhost:1521:ORCL"
-                       user="${env.POSTGRES_USER}" password="${env.POSTGRES_PASSWORD}"/>
+                       user="${env.ORACLE_USER}" password="${env.ORACLE_PASSWORD}"/>
 </dataSource>
 ```
 
@@ -172,7 +173,7 @@ Copy `postgresql-{version}.jar` to `<server_name>/lib/postgresql/`.
 <dataSource id="DefaultDataSource" jndiName="jdbc/myapp">
     <jdbcDriver libraryRef="PostgreSQLLib"/>
     <properties.postgresql serverName="localhost" portNumber="5432"
-                           databaseName="myapp" user="${env.MYSQL_USER}" password="${env.MYSQL_PASSWORD}"/>
+                           databaseName="myapp" user="${env.POSTGRES_USER}" password="${env.POSTGRES_PASSWORD}"/>
 </dataSource>
 ```
 
@@ -198,9 +199,9 @@ For any other third-party library that Liberty must load directly (e.g. a custom
 
 | Spring Boot | Open Liberty |
 |---|---|
-| `spring-boot-starter-amqp` | `com.rabbitmq:amqp-client` + MicroProfile Reactive Messaging (`mpReactiveMessaging-3.0` feature) |
-| `spring-kafka` | `org.apache.kafka:kafka-clients` + `mpReactiveMessaging-3.0` + Kafka connector |
-| `spring-boot-starter-jms` | `messaging-3.1` Liberty feature + configure `<connectionFactory>` in `server.xml` |
+| `spring-boot-starter-amqp` | Retain the RabbitMQ Java client or select a separately verified Reactive Messaging RabbitMQ connector. Open Liberty's built-in Reactive Messaging connector is for Kafka; `mpReactiveMessaging-3.0` alone does not connect RabbitMQ. |
+| `spring-kafka` | Candidate: `org.apache.kafka:kafka-clients` + `mpReactiveMessaging-3.0` + Liberty Kafka connector. Preserve acknowledgment/commit, group/client identity, serializers, retry/DLQ, ordering, rebalance, and transaction behavior through the messaging module. |
+| `spring-boot-starter-jms` | `messaging-3.1` plus an exact Jakarta Connectors 2.1-compatible provider/resource adapter and reviewed `jmsConnectionFactory`, destination, and activation specification. The feature provides the API/configuration model, not a broker. |
 
 ## Templating
 
@@ -216,7 +217,8 @@ For any other third-party library that Liberty must load directly (e.g. a custom
 |---|---|
 | `spring-boot-starter` (DI) | CDI 4.1 included in `jakartaee-11.0` feature |
 | `spring-boot-configuration-processor` | MicroProfile Config included in `microProfile-7.0` feature |
-| `spring-boot-starter-quartz` | Preserve Quartz when jobs require its semantics, or migrate simple schedules to Jakarta Enterprise Beans `@Schedule` via `enterpriseBeansLite-4.0` |
+| `spring-boot-starter-batch` | Candidate: Jakarta Batch 2.1 (`batch-2.1`) only after job identity, parameters, checkpoints, restart, transitions, listeners, partitioning, repository, and operations are mapped and failure-tested. |
+| `spring-boot-starter-quartz` | Preserve Quartz when jobs require durable/clustered triggers, calendars, misfire policies, or its operations; migrate only proven-simple schedules to Jakarta Enterprise Beans `@Schedule` via `enterpriseBeansLite-4.0`. |
 
 ## Cloud / Observability
 
@@ -225,7 +227,9 @@ For any other third-party library that Liberty must load directly (e.g. a custom
 | `micrometer-registry-prometheus` | `mpMetrics-5.1` Liberty feature (Prometheus-compatible `/metrics` endpoint) |
 | `spring-boot-starter-logging` | Liberty logging and Java Util Logging; preserve an application logging facade only when required and configure Liberty `<logging>` explicitly |
 | `opentelemetry` | `mpTelemetry-2.0` Liberty feature + `io.opentelemetry:opentelemetry-api` |
-| `spring-cloud-starter-config` | MicroProfile Config `mpConfig-3.1` + custom `ConfigSource` implementations |
+| `spring-cloud-starter-config` | No property-only conversion. Inventory remote source precedence, bootstrap timing, refresh, encryption, availability, and fail-fast behavior; then select MicroProfile Config plus a verified `ConfigSource`, an external platform mechanism, retained client, or staged exception. |
+
+Spring Cloud Gateway, discovery/load balancing, OpenFeign, Circuit Breaker, Stream/Function/Task, Vault, and custom starters must pass the non-mechanical-stack preflight. Do not infer that similarly named MicroProfile features preserve their routing, discovery, refresh, binder, or resilience behavior.
 
 ## Testing
 

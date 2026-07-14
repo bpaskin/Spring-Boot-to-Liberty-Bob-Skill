@@ -30,13 +30,17 @@ Load the relevant reference file when working on a module:
 |---|---|
 | [references/dependency-map.md](references/dependency-map.md) | Build module: dependency and plugin mapping |
 | [references/annotation-map.md](references/annotation-map.md) | Code/security modules: annotation candidates and semantic mapping boundaries |
+| [modules/complexity-gate.md](modules/complexity-gate.md) | Preflight: reactive, cloud, integration, batch, SOAP/RPC, custom extensions, and non-relational stacks |
 | [modules/security.md](modules/security.md) | Security module: authentication, authorization, OAuth2/OIDC/JWT, registries, browser state, and negative tests |
 | [modules/async-events.md](modules/async-events.md) | Async/events module: executors, event delivery, transaction semantics, retry, and recovery |
+| [modules/messaging.md](modules/messaging.md) | Messaging module: broker topology, acknowledgment, ordering, retry/DLQ, transactions, and recovery |
+| [modules/batch-scheduling.md](modules/batch-scheduling.md) | Batch/scheduling module: jobs, checkpoints, timers, overlap, misfire, restart, and operations |
 | [modules/deploy.md](modules/deploy.md) | Optional deployment module: images, Kubernetes/OpenShift, probes, secrets, and CI/CD |
 | [references/jakarta-data.md](references/jakarta-data.md) | Code/build modules only when Spring Data repositories are present |
 | [references/config-map.md](references/config-map.md) | Build module: configuration property migration |
 | [references/jakarta-ee11-liberty-features.md](references/jakarta-ee11-liberty-features.md) | Canonical Jakarta EE 11 and MicroProfile-to-Liberty feature mapping |
 | [references/migration-ledger.md](references/migration-ledger.md) | Every run: baseline, consolidated contract, module transactions, and resume behavior |
+| [references/production-integration-testing.md](references/production-integration-testing.md) | External systems: disposable services, failure cases, XA/recovery, identity, brokers, telemetry, and deployment parity |
 | [references/frontend-jakarta-mvc.md](references/frontend-jakarta-mvc.md) | Frontend module only when the contract selects Jakarta MVC/Krazo |
 | [references/frontend-faces.md](references/frontend-faces.md) | Frontend module only when the contract selects Jakarta Faces |
 | [references/frontend-thymeleaf.md](references/frontend-thymeleaf.md) | Frontend module only when the contract retains core Thymeleaf |
@@ -49,10 +53,11 @@ Scan the application to understand whether it should be rewritten or rehosted:
 
 - **Build system**: Read the build file (`pom.xml` for Maven, `build.gradle` or `build.gradle.kts` for Gradle) — Spring Boot version, starters, plugins
 - **Build launcher**: Record whether `mvnw`/`gradlew` exists; do not assume a wrapper is present
-- **Java code**: Search for Spring imports, annotations, API calls, configuration classes, repositories, scheduling, async/executors, application events, transaction/retry semantics, security, and bootstrap code
+- **Java code**: Search for Spring imports, annotations, API calls, configuration classes, repositories, scheduling/batch, async/executors, application events, transaction/retry semantics, messaging/integration flows, security, reactive APIs, Spring Cloud/custom extensions, and bootstrap code
 - **Configuration**: Read `application.properties`/`application.yml`, check for profiles
 - **UI / View layer**: Check for Thymeleaf/JSP templates, static resources, `Model`/`ModelAndView` patterns, `@Controller` (server-rendered) vs `@RestController` (API-only)
 - **Tests**: Inventory every test source and test dependency, including plain JUnit tests with no Spring annotations
+- **External and operational integrations**: Inventory databases/XA/schema tools, brokers, identity providers, service discovery/gateways, cache/NoSQL, Actuator/metrics/telemetry, SOAP/RPC, and deployment dependencies
 
 Present a summary table with area, findings, and complexity. Then ask the user to choose a migration scope:
 
@@ -71,7 +76,7 @@ After scope selection, perform a read-only baseline before changing files:
 - Record the current branch, default branch, remote, and complete worktree status. Treat every existing change as user-owned.
 - Detect the build launcher and installed JDK. Run the original compile/package and existing test commands when they are safe and available; do not install software, start external services, or change configuration merely to make the baseline pass.
 - Record pre-existing build/test failures separately from migration regressions.
-- Inventory application bootstrap, endpoints, views, tests, datasource/driver/schema settings, authentication/authorization, async/executor/event/transaction/retry behavior, scheduled work, messaging, existing deployment artifacts, external services, expected ports, container-runtime availability, and required network access.
+- Inventory application bootstrap, endpoints, views, tests, datasource/driver/schema/XA settings, authentication/authorization, async/executor/event/transaction/retry behavior, scheduled and batch work, messaging/integration topology, reactive/Cloud/custom-extension stacks, observability, existing deployment artifacts, external services, expected ports, container-runtime availability, and required network access.
 - Flag missing essentials such as an application entry point, datasource configuration, JDBC driver, test coverage, credentials, or required local services.
 
 Then present one **Migration Contract** containing only applicable decisions and ask for one response:
@@ -84,8 +89,12 @@ Then present one **Migration Contract** containing only applicable decisions and
 - repository strategy when Spring Data repositories are present: Jakarta Data 1.0, CDI + `EntityManager`, or a documented staged exception
 - when Spring Security is present: authentication mechanism/source, role and claim/group mapping, protected-route policy, session/cookie/logout behavior, CSRF/CORS policy, trust material, and required negative tests
 - when async/events/advanced transactions/retry are present: executor and context policy, event delivery/ordering/transaction phase, transaction attributes, retry/recovery behavior, and overload/failure tests
+- for every non-mechanical stack: dedicated module, retained library, explicit redesign, staged exception, or rehost strategy; complete removal remains blocked while any strategy or baseline semantics are unknown
+- when messaging/integration is present: broker/provider, destinations/groups, schemas/headers, acknowledgment/ordering/concurrency, transaction/XA, retry/DLQ/idempotency, security, recovery, and failure tests
+- when batch/scheduling is present: trigger/time zone/misfire/overlap, job identity, checkpoints/restart, repository/schema, transaction, clustering, operations, and crash-recovery tests
 - test approach and whether a compatible container runtime is available
 - known external-service constraints and which runtime checks may be blocked
+- external-integration test tier: static contract, disposable integration, Liberty integration, or target-platform parity, with required negative/failure cases
 - deployment track: explicit `SKIP`, files only, local image validation, publish, or deploy; when selected include target platform, pinned image/JDK, registry/tag policy, configuration/secrets owner, probes, resources, and CI requirements
 - for rehosting only: Spring Boot stream, JAR/WAR and full/thin artifact choice, actual artifact name, context root/ports, and whether Liberty or Spring properties own each runtime setting
 
@@ -107,10 +116,13 @@ Do not repeat a contract question later. Ask a new question only when newly disc
 | Module                          | Gate Check                                                                                                                | Gate Result                                                                              |
 |---------------------------------|---------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
 | [jdk](modules/jdk.md)           | Jakarta EE 11 requires Java 17+; this skill targets supported LTS JDKs 17, 21, and 25 | **ALWAYS** -- stop migration if unsupported |
+| [complexity-gate](modules/complexity-gate.md) | Rewrite scope plus reactive, Spring Cloud/Integration/Batch, messaging, SOAP/RPC, custom extension, or non-relational stack evidence | **PASS** when every detected stack has a confirmed route; **SKIP** when none exist or for rehost; **BLOCKED** while any semantic strategy is unknown |
 | [rehost-spring](modules/rehost-spring.md) | Contract selects retain Spring and rehost; application is Spring Boot 3.x/4.x with a valid bootstrap | **PASS** for an unconfigured eligible app; **PARTIAL** when Liberty rehost configuration exists; **SKIP** for rewrite scopes; **BLOCKED** for an unsupported stream or missing bootstrap |
 | [build](modules/build.md)       | Rewrite scope plus Spring Boot build markers or existing Liberty/Jakarta build artifacts | **PASS** for Spring build markers; **PARTIAL** when Spring and Liberty/Jakarta artifacts coexist; **SKIP** for rehosting or when no rewrite build work is needed |
 | [code](modules/code.md)         | Rewrite scope plus non-security Spring APIs, configuration, repositories, bootstrap, scheduling, or migration TODOs | **PASS** for Spring usage; **PARTIAL** when Spring and Jakarta code coexist or TODOs remain; **SKIP** for rehosting or after semantic inspection finds no rewrite work |
 | [async-events](modules/async-events.md) | Rewrite scope plus `@Async`, Spring executors/events, non-default transaction semantics, Spring Retry/listeners, or mixed migrated equivalents | **PASS** for detected Spring semantics; **PARTIAL** for mixed implementations; **SKIP** for rehosting or no matching behavior; **BLOCKED** when the semantic contract is unknown |
+| [messaging](modules/messaging.md) | Rewrite scope plus Kafka, JMS, AMQP/RabbitMQ, Pulsar, Spring Cloud Stream, or Spring Integration messaging flows | **PASS** for detected flows; **PARTIAL** for mixed implementations; **SKIP** when absent or rehosting; **BLOCKED** until delivery, failure, and transaction semantics are confirmed |
+| [batch-scheduling](modules/batch-scheduling.md) | Rewrite scope plus Spring Batch, Quartz, `@Scheduled`, `TaskScheduler`, or mixed jobs/timers | **PASS** for detected jobs; **PARTIAL** for mixed implementations; **SKIP** when absent or rehosting; **BLOCKED** until restart/trigger/failure semantics are confirmed |
 | [security](modules/security.md) | Rewrite scope plus Spring Security dependencies/configuration, filter chains, authorization annotations/expressions, OAuth2/OIDC/JWT, registries, sessions, CSRF, or CORS | **PASS** for Spring Security; **PARTIAL** for mixed Spring/Jakarta/Liberty security; **SKIP** for rehosting or when no security behavior exists; **BLOCKED** until a security design is confirmed |
 | [frontend](modules/frontend.md) | Rewrite scope plus templates/static assets, controllers, model/view returns, or MVC configuration | **PASS** for a Spring/view layer; **PARTIAL** for mixed views; **SKIP** for rehosting or a verified API-only application |
 | [testing](modules/testing.md)   | Any test source, test dependency, test configuration, or absence of tests that must be recorded as a coverage gap | **PASS** when tests exist; **PARTIAL** for mixed Spring/plain/Jakarta tests; **SKIP** only when no tests exist, after recording the coverage risk |
@@ -126,9 +138,9 @@ Choose exactly one route from the confirmed contract:
 ```
 IF scope == RETAIN_SPRING_REHOST:
   MODULES = [jdk, rehost-spring, testing, run-local, deploy]
-  LOG build, code, async-events, security, frontend, cleanup, feature-scan as SKIP — Spring rewrite not selected
+  LOG complexity-gate, build, code, async-events, messaging, batch-scheduling, security, frontend, cleanup, feature-scan as SKIP — Spring rewrite not selected
 ELSE:
-  MODULES = [jdk, build, code, async-events, security, frontend, testing, cleanup, feature-scan, run-local, deploy]
+  MODULES = [jdk, complexity-gate, build, code, async-events, messaging, batch-scheduling, security, frontend, testing, cleanup, feature-scan, run-local, deploy]
 
 FOR module IN MODULES:
 
@@ -148,6 +160,8 @@ FOR module IN MODULES:
   8. REVIEW — inspect the module diff and verify that no pre-existing user change was overwritten
   9. LOG — record `PASS`, `PARTIAL`, or `BLOCKED`, changed files, command result, and next resume point
 ```
+
+If `complexity-gate` is `BLOCKED`, do not execute build/code/cleanup work that would remove or invalidate a blocked stack. Resume at the preflight contract after the user selects a strategy.
 
 If a module cannot be repaired, reverse only edits made by that module when they do not overlap pre-existing user changes. Never use a broad reset/restore. When safe surgical rollback is impossible, leave the evidence in place, mark `BLOCKED`, and ask the user before altering shared work.
 
@@ -176,7 +190,8 @@ Run each check in order. Distinguish `FAIL` (a migration regression) from `BLOCK
 | 5 | **Starts up** | Use the time-bounded lifecycle in [modules/run-local.md](modules/run-local.md) | Readiness detected within the recorded timeout; app responds; logs contain no unresolved application errors; process is stopped gracefully |
 | 6 | **View scope** | Inspect templates and view configuration | Rewrite matches the selected view path; rehost preserves baseline Spring view behavior |
 | 7 | **Security parity** | Run the contract's positive and negative security matrix | Authentication, authorization, CSRF/CORS, session/logout, trust, and denial behavior match the completed scope; non-applicable rows have evidence |
-| 8 | **Deployment track** | Inspect the deployment contract and run selected local/render/deployment checks | Explicit `SKIP`, or selected files/image/deployment level has matching evidence; external actions without approval remain `BLOCKED` |
+| 8 | **Integration and recovery parity** | Run messaging, batch, database/XA/schema, identity, and observability matrices from the applicable modules/reference | Positive behavior plus duplicate, unavailable-dependency, rollback/restart/recovery, and security failures match the contract; unavailable infrastructure is `BLOCKED` |
+| 9 | **Deployment track** | Inspect the deployment contract and run selected local/render/deployment checks | Explicit `SKIP`, or selected files/image/deployment level has matching evidence; external actions without approval remain `BLOCKED` |
 
 Assign the highest evidence level actually achieved:
 
@@ -201,6 +216,8 @@ Answer each question honestly:
 
 Present the review as a structured report:
 
+Before delivery, compare the ledger row names with the canonical list below. Every module must have exactly one row, including modules that are `SKIP` or `BLOCKED`; a missing row is an incomplete report. Likewise, include every Step 4 validation row even when it is non-applicable or blocked.
+
 ```
 ## Migration Report: [app-name]
 
@@ -218,10 +235,13 @@ Present the review as a structured report:
 | Module | Gate | State | Evidence / changed files | Validation | Resume point |
 |---|---|---|---|---|---|
 | jdk | ALWAYS | ... | ... | ... | ... |
+| complexity-gate | rewrite preflight | ... | ... | ... | ... |
 | rehost-spring | ... | ... | ... | ... | ... |
 | build | ... | ... | ... | ... | ... |
 | code | ... | ... | ... | ... | ... |
 | async-events | ... | ... | ... | ... | ... |
+| messaging | ... | ... | ... | ... | ... |
+| batch-scheduling | ... | ... | ... | ... | ... |
 | security | ... | ... | ... | ... | ... |
 | frontend | ... | ... | ... | ... | ... |
 | testing | ... | ... | ... | ... | ... |
@@ -247,7 +267,10 @@ Present the review as a structured report:
 | rehost-spring | build file, server.xml | ... |
 | build | pom.xml or build.gradle(.kts), application.properties, server.xml | ... |
 | code | ... | ... |
+| complexity-gate | migration report | ... |
 | async-events | source/config/tests | ... |
+| messaging | source/config/broker tests | ... |
+| batch-scheduling | jobs/timers/config/restart tests | ... |
 | security | server.xml, security classes/config, deployment descriptors, tests | ... |
 | frontend | ... | ... |
 | testing | ... | ... |
@@ -265,6 +288,7 @@ Present the review as a structured report:
 | Starts up | PASS/FAIL/BLOCKED | readiness probe, log path, errors resolved |
 | View scope | PASS/FAIL | retained-template contract or search evidence |
 | Security parity | PASS/FAIL/BLOCKED | anonymous/authenticated/forbidden results and applicable mechanism, browser-state, and logout evidence |
+| Integration/recovery parity | PASS/FAIL/BLOCKED/SKIP | broker, batch, data/XA/schema, identity, observability, restart, and failure evidence |
 | Deployment track | PASS/FAIL/BLOCKED/SKIP | files/image/deployment evidence and target, or explicit out-of-scope decision |
 
 ### Unmigrated Code (TODOs)

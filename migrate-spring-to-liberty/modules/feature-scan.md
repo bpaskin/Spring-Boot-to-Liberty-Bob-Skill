@@ -76,6 +76,9 @@ grep -rn "jakarta.mail\|@MailSessionDefinition\|Session.*mail" src/main/java/
 
 # Jakarta EJB (timers, scheduling)
 grep -rn "jakarta.ejb\|@Singleton\|@Schedule\|@Stateless\|@Stateful\|@MessageDriven" src/main/java/
+
+# Jakarta Batch / XML Web Services / Jakarta Messaging
+grep -rn "jakarta.batch\|JobOperator\|@BatchProperty\|jakarta.jws\|jakarta.xml.ws\|@WebService\|jakarta.jms\|@JMSConnectionFactoryDefinition" src/main/
 ```
 
 ### 1b. MicroProfile APIs
@@ -129,7 +132,7 @@ Use the scan results and the table below to determine which features are require
 | If you found … | Add this feature |
 |---|---|
 | CDI scope/injection annotations or `jakarta.enterprise.*` imports | `cdi-4.1` |
-| `@Path`, `@GET/@POST/@PUT/@DELETE/@PATCH`, `@ApplicationPath`, JAX-RS `Application` class | `restfulWS-4.0` + `jsonb-3.0` + `jsonp-2.1` |
+| `@Path`, `@GET/@POST/@PUT/@DELETE/@PATCH`, `@ApplicationPath`, JAX-RS `Application` class | `restfulWS-4.0`; add the JSON feature derived from the separate JSON-B/JSON-P rows when the endpoint uses it |
 | `@Entity`, `@PersistenceContext`, `EntityManager`, `persistence.xml` present | `persistence-3.2` |
 | `jakarta.data.*`, Jakarta Data `@Repository`, `DataRepository`, `BasicRepository`, or `CrudRepository` | `data-1.0`; also add `persistence-3.2` for Jakarta Persistence entities |
 | `@NotNull`, `@NotBlank`, `@Valid`, `@Size`, Jakarta Validation imports | `validation-3.1` |
@@ -146,6 +149,9 @@ Use the scan results and the table below to determine which features are require
 | `jakarta.mail.*` | `mail-2.1` |
 | `@Stateless`, `@Stateful`, `@MessageDriven` (full Enterprise Beans) | `enterpriseBeans-4.0` |
 | `jakarta.ejb.Singleton` + `@Schedule` (timer only) | `enterpriseBeansLite-4.0` |
+| Jakarta Batch APIs, job XML, `JobOperator`, `@BatchProperty` | `batch-2.1` |
+| `jakarta.jws.*`, `jakarta.xml.ws.*`, `@WebService`, or JAX-WS descriptors | `xmlWS-4.0` |
+| Jakarta Messaging consumer implemented as `@MessageDriven` | `messaging-3.1` + `mdb-4.0` and the provider resource adapter |
 | `@ConfigProperty`, `@ConfigProperties`, `ConfigProvider` | `mpConfig-3.1` |
 | `@Liveness`, `@Readiness`, `HealthCheck` | `mpHealth-4.0` |
 | `@Counted`, `@Timed`, `@Gauge`, `MetricRegistry` | `mpMetrics-5.1` |
@@ -162,11 +168,12 @@ Use the scan results and the table below to determine which features are require
 
 ### JSON serialization note
 
-Always add `jsonb-3.0` and `jsonp-2.1` whenever `restfulWS-4.0` is enabled. This ensures full JSON serialization support (JSON-B for object binding and JSON-P for programmatic JSON building) is available alongside JAX-RS.
+Add `jsonb-3.0` when REST endpoints bind JSON objects, records, collections, or maps, or use JSON-B APIs/annotations. Add `jsonp-2.1` directly only for programmatic JSON-P use when `jsonb-3.0` is absent. Open Liberty's `jsonb-3.0` feature already enables `jsonp-2.1`, so declaring both is redundant. Plain text/HTML REST endpoints need neither JSON feature unless another source trigger requires it.
 
 ### Feature compatibility rules
 
 - **Avoid redundant umbrella and sub-features**: if you keep `jakartaee-11.0`, omit the individual Jakarta EE features it already enables. Redundancy obscures the intended runtime surface; incompatible versions are the actual conflict.
+- **`jsonb-3.0` already enables `jsonp-2.1`** — declare only `jsonb-3.0` when both APIs are needed; declare `jsonp-2.1` alone for programmatic JSON-P without JSON-B.
 - **`transaction-2.0` is included in `persistence-3.2`** — omit it if `persistence-3.2` is already in the list.
 - **`data-1.0` includes Open Liberty's relational Jakarta Data provider** — use it for migrated repository interfaces. `dataContainer-1.0` exposes only the Jakarta Data API and is valid only when the application deliberately supplies another provider.
 - **Every Jakarta Data repository needs a reviewed datastore binding** — resolve its `@Repository(dataStore = "...")` value to a persistence-unit reference, datasource, or `databaseStore`. Do not rely on `java:comp/DefaultDataSource` accidentally. Keep `createTables` and `dropTables` disabled unless the destructive-action gate was explicitly satisfied.
@@ -176,6 +183,9 @@ Always add `jsonb-3.0` and `jsonp-2.1` whenever `restfulWS-4.0` is enabled. This
 - **`mpJwt-2.1` requires `mpConfig-3.1`** — always add both together.
 - **Executor presence is not enough to infer defaults** — `concurrent-3.1` supplies managed execution, but pool, queue, context, rejection, and shutdown behavior still come from the async/events contract.
 - **`mpFaultTolerance-4.1` does not reproduce Spring Retry listeners or recovery mechanically** — add it only after the retry contract selects MicroProfile Fault Tolerance.
+- **Messaging features do not select a broker/provider automatically** — `mpReactiveMessaging-3.0` has a Liberty Kafka connector; `messaging-3.1` requires an actual Jakarta Connectors provider/resource adapter. Follow the messaging contract.
+- **`batch-2.1` does not prove Spring Batch restart parity** — require a reviewed job repository and crash/checkpoint/restart tests before removing Spring Batch.
+- **XML Binding is not a SOAP runtime** — use `xmlWS-4.0` for a selected Jakarta XML Web Services endpoint/client design; do not map Spring-WS to `xmlBinding-4.0` alone.
 
 ## Step 3 — Update server.xml
 
@@ -196,7 +206,6 @@ Replace the umbrella feature block with the minimal computed set. The structure 
     <feature>cdi-4.1</feature>
     <feature>restfulWS-4.0</feature>
     <feature>jsonb-3.0</feature>
-    <feature>jsonp-2.1</feature>
     <feature>persistence-3.2</feature>
     <feature>validation-3.1</feature>
     <!-- MicroProfile -->

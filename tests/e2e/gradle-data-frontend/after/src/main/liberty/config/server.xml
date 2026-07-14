@@ -2,8 +2,6 @@
   <featureManager>
     <feature>cdi-4.1</feature>
     <feature>restfulWS-4.0</feature>
-    <feature>jsonb-3.0</feature>
-    <feature>jsonp-2.1</feature>
     <feature>data-1.0</feature>
     <feature>persistence-3.2</feature>
   </featureManager>

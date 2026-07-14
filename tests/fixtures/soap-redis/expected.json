@@ -1,0 +1,5 @@
+{
+  "complex_stack_strategy_required": true,
+  "soap_strategy_required": true,
+  "nonrelational_strategy_required": true
+}

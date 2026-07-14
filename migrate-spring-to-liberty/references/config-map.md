@@ -180,7 +180,7 @@ MicroProfile Config property sources in priority order (highest first):
 
 | Spring Boot | Open Liberty |
 |---|---|
-| `spring.cache.type=caffeine` | JCache provider dependency (Hazelcast, EhCache, etc.) + `<cachingProvider>` in `server.xml` — no Liberty `jcache` feature needed |
+| `spring.cache.type=caffeine` | Retain Caffeine directly or select a tested JCache provider only when cache names, keys, expiry, eviction, null handling, serialization, statistics, and multi-node behavior are preserved. `<cachingProvider>` does not make a non-JCache provider compatible. |
 | `@Cacheable("name")` | `@CacheResult(cacheName="name")` — uses `javax.cache` annotations (not yet migrated to `jakarta` namespace) |
 | `@CacheEvict("name")` | `@CacheRemove(cacheName="name")` |
 

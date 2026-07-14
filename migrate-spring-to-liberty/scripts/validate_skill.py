@@ -14,6 +14,8 @@ SKILL_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = SKILL_ROOT.parent
 FIXTURES_ROOT = REPO_ROOT / "tests" / "fixtures"
 E2E_ROOT = REPO_ROOT / "tests" / "e2e"
+AGENT_EVAL_ROOT = REPO_ROOT / "tests" / "agent-evals"
+PRODUCTION_ROOT = REPO_ROOT / "tests" / "production"
 
 INVALID_TEXT = {
     "<feature>beanValidation-3.1</feature>": "Jakarta EE 11 uses validation-3.1",
@@ -21,7 +23,6 @@ INVALID_TEXT = {
     "<feature>ejbLite-4.0</feature>": "use enterpriseBeansLite-4.0",
     "<feature>ejb-4.0</feature>": "use enterpriseBeans-4.0",
     "<feature>messaging-3.0</feature>": "Jakarta EE 11 uses messaging-3.1",
-    "<feature>servlet-6.0</feature>": "Jakarta EE 11 uses servlet-6.1",
     "<feature>concurrent-3.0</feature>": "Jakarta EE 11 uses concurrent-3.1",
     "io.openliberty.tools:microshed-testing-liberty": "MicroShed uses org.microshed",
     "quarkus-rest": "Quarkus artifacts do not belong in a Liberty mapping",
@@ -33,6 +34,12 @@ INVALID_TEXT = {
     "Remove Spring CSRF tokens from HTML and JavaScript": "replace and test CSRF protection first",
     "LibertyServerContainerConfiguration": "MicroShed documents SharedContainerConfiguration with ApplicationContainer",
     "new LibertyServerContainer(": "MicroShed documents ApplicationContainer",
+    "spring-boot-starter-ws` | `xmlBinding-4.0`": "SOAP needs an XML Web Services strategy, not only JAXB",
+    "starter-data-redis` | Lettuce or Jedis client + configure `<connectionFactory>`": "Redis is not configured as a Liberty JDBC connection factory",
+    "starter-data-mongodb` | `com.mongodb:mongodb-driver-sync` + `mongoDBClient`": "the stabilized server-managed Mongo feature is not a default strategic mapping",
+    "starter-amqp` | `com.rabbitmq:amqp-client` + MicroProfile Reactive Messaging": "RabbitMQ requires a separately verified connector or retained client",
+    "spring.cache.type=caffeine` | JCache provider dependency": "Caffeine is not mechanically converted into an unrelated JCache provider",
+    "<version>3.6</version>": "the published jandex-maven-plugin release is 3.6.0",
 }
 
 REQUIRED_CANONICAL_FEATURES = {
@@ -50,6 +57,7 @@ REQUIRED_REHOST_FEATURES = {"springBoot-3.0", "springBoot-4.0"}
 
 ALLOWED_DECLARED_FEATURES = REQUIRED_CANONICAL_FEATURES | {
     "appSecurity-6.0",
+    "batch-2.1",
     "cdi-4.1",
     "dataContainer-1.0",
     "faces-4.1",
@@ -57,6 +65,7 @@ ALLOWED_DECLARED_FEATURES = REQUIRED_CANONICAL_FEATURES | {
     "jsonb-3.0",
     "jsonp-2.1",
     "messaging-3.1",
+    "mdb-4.0",
     "microProfile-7.0",
     "mpConfig-3.1",
     "mpHealth-4.0",
@@ -65,16 +74,21 @@ ALLOWED_DECLARED_FEATURES = REQUIRED_CANONICAL_FEATURES | {
     "openidConnectClient-1.0",
     "mpMetrics-5.1",
     "mpOpenAPI-4.0",
+    "mpReactiveMessaging-3.0",
+    "mpRestClient-4.0",
     "pages-4.0",
     "persistence-3.2",
     "restfulWS-4.0",
+    "servlet-6.0",
     "servlet-6.1",
     "springBoot-3.0",
     "springBoot-4.0",
+    "transaction-2.0",
     "validation-3.1",
     "webProfile-11.0",
     "wmqJmsClient-3.0",
     "xmlBinding-4.0",
+    "xmlWS-4.0",
 }
 
 MARKDOWN_LINK = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
@@ -118,6 +132,10 @@ def validate_frontmatter(errors: list[str]) -> None:
 def validate_invariants(errors: list[str]) -> None:
     for path in markdown_files():
         text = path.read_text(encoding="utf-8")
+        if "<feature>servlet-6.0</feature>" in text and path.name != "rehost-spring.md":
+            errors.append(
+                f"{path.relative_to(REPO_ROOT)}: servlet-6.0 is allowed only for the Boot 3 rehost route; Jakarta EE 11 rewrites use servlet-6.1"
+            )
         for invalid, reason in INVALID_TEXT.items():
             if invalid in text:
                 errors.append(f"{path.relative_to(REPO_ROOT)}: {invalid!r}: {reason}")
@@ -162,6 +180,10 @@ def validate_invariants(errors: list[str]) -> None:
         if required_text not in rehost:
             errors.append(f"rehost module is missing safety text {required_text!r}")
 
+    skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+    if "Every module must have exactly one row" not in skill_text:
+        errors.append("SKILL.md is missing the final ledger completeness check")
+
     security = (SKILL_ROOT / "modules" / "security.md").read_text(encoding="utf-8")
     for required_text in (
         "SecurityFilterChain",
@@ -189,6 +211,29 @@ def validate_invariants(errors: list[str]) -> None:
         if required_text not in async_events:
             errors.append(f"async/events module is missing safety text {required_text!r}")
 
+    complexity = (SKILL_ROOT / "modules" / "complexity-gate.md").read_text(encoding="utf-8")
+    for required_text in (
+        "WebFlux",
+        "R2DBC",
+        "Spring Cloud",
+        "Spring Integration",
+        "custom starters",
+        "Mark this module `BLOCKED`",
+        "DEDICATED_MODULE",
+    ):
+        if required_text not in complexity:
+            errors.append(f"complexity gate is missing safety text {required_text!r}")
+
+    messaging = (SKILL_ROOT / "modules" / "messaging.md").read_text(encoding="utf-8")
+    for required_text in ("offset", "dead-letter", "ordering", "Kafka", "JMS", "RabbitMQ"):
+        if required_text not in messaging:
+            errors.append(f"messaging module is missing safety text {required_text!r}")
+
+    batch = (SKILL_ROOT / "modules" / "batch-scheduling.md").read_text(encoding="utf-8")
+    for required_text in ("checkpoint", "restart", "misfire", "Quartz", "Jakarta Batch", "time zone"):
+        if required_text not in batch:
+            errors.append(f"batch/scheduling module is missing safety text {required_text!r}")
+
     deploy = (SKILL_ROOT / "modules" / "deploy.md").read_text(encoding="utf-8")
     for required_text in (
         "separate explicit authorization",
@@ -201,6 +246,14 @@ def validate_invariants(errors: list[str]) -> None:
     ):
         if required_text not in deploy:
             errors.append(f"deployment module is missing safety text {required_text!r}")
+
+    feature_scan = (SKILL_ROOT / "modules" / "feature-scan.md").read_text(encoding="utf-8")
+    for required_text in (
+        "`jsonb-3.0` feature already enables `jsonp-2.1`",
+        "Plain text/HTML REST endpoints need neither JSON feature",
+    ):
+        if required_text not in feature_scan:
+            errors.append(f"feature scan is missing minimal JSON guidance {required_text!r}")
 
 
 def validate_links(errors: list[str]) -> None:
@@ -345,6 +398,109 @@ def classify_fixture(root: Path) -> dict[str, str | bool]:
         )
         for path in root.rglob("*")
     )
+    stack_text = "\n".join((build_text, main_text))
+    reactive_strategy_required = any(
+        marker in stack_text
+        for marker in (
+            "spring-boot-starter-webflux",
+            "spring-boot-starter-data-r2dbc",
+            "org.springframework.web.reactive",
+            "reactor.core",
+            "ReactiveCrudRepository",
+        )
+    )
+    cloud_strategy_required = any(
+        marker in stack_text
+        for marker in (
+            "org.springframework.cloud",
+            "spring-cloud-",
+            "@FeignClient",
+            "@EnableFeignClients",
+        )
+    )
+    custom_starter_strategy_required = any(
+        marker in stack_text
+        for marker in (
+            "AutoConfiguration.imports",
+            "spring.factories",
+            "@AutoConfiguration",
+            "ImportSelector",
+            "BeanFactoryPostProcessor",
+            "BeanDefinitionRegistryPostProcessor",
+        )
+    )
+    integration_strategy_required = any(
+        marker in stack_text
+        for marker in ("spring-integration", "org.springframework.integration", "@IntegrationComponentScan")
+    )
+    messaging_strategy_required = any(
+        marker in stack_text
+        for marker in (
+            "spring-kafka",
+            "spring-boot-starter-amqp",
+            "spring-cloud-stream",
+            "@KafkaListener",
+            "@RabbitListener",
+            "JmsTemplate",
+            "@JmsListener",
+        )
+    )
+    batch_strategy_required = any(
+        marker in stack_text
+        for marker in (
+            "spring-boot-starter-batch",
+            "spring-batch",
+            "org.springframework.batch",
+            "@Scheduled",
+            "org.quartz",
+        )
+    )
+    soap_strategy_required = any(
+        marker in stack_text
+        for marker in (
+            "spring-boot-starter-web-services",
+            "spring-ws",
+            "org.springframework.ws",
+            "@Endpoint",
+            "WebServiceTemplate",
+        )
+    )
+    nonrelational_strategy_required = any(
+        marker in stack_text
+        for marker in (
+            "spring-boot-starter-data-redis",
+            "spring-boot-starter-data-mongodb",
+            "spring-boot-starter-data-elasticsearch",
+            "RedisTemplate",
+            "MongoTemplate",
+            "ElasticsearchOperations",
+        )
+    )
+    external_data_strategy_required = any(
+        marker in stack_text
+        for marker in (
+            "org.postgresql",
+            "PGXADataSource",
+            "spring.datasource.",
+            "flyway",
+            "liquibase",
+        )
+    )
+    identity_integration_required = any(
+        marker in stack_text
+        for marker in (
+            "oauth2-resource-server",
+            "oauth2-client",
+            "oauth2ResourceServer",
+            "oauth2Login",
+            "issuer-uri",
+            "jwk-set-uri",
+        )
+    )
+    observability_strategy_required = any(
+        marker in stack_text
+        for marker in ("spring-boot-starter-actuator", "micrometer", "opentelemetry")
+    )
 
     return {
         "build": build,
@@ -364,6 +520,29 @@ def classify_fixture(root: Path) -> dict[str, str | bool]:
             )
         ),
         "rehost_candidate": supported_boot_stream and spring_bootstrap,
+        "complex_stack_strategy_required": any(
+            (
+                reactive_strategy_required,
+                cloud_strategy_required,
+                custom_starter_strategy_required,
+                integration_strategy_required,
+                messaging_strategy_required,
+                batch_strategy_required,
+                soap_strategy_required,
+                nonrelational_strategy_required,
+            )
+        ),
+        "reactive_strategy_required": reactive_strategy_required,
+        "cloud_strategy_required": cloud_strategy_required,
+        "integration_strategy_required": integration_strategy_required,
+        "custom_starter_strategy_required": custom_starter_strategy_required,
+        "messaging_strategy_required": messaging_strategy_required,
+        "batch_strategy_required": batch_strategy_required,
+        "soap_strategy_required": soap_strategy_required,
+        "nonrelational_strategy_required": nonrelational_strategy_required,
+        "external_data_strategy_required": external_data_strategy_required,
+        "identity_integration_required": identity_integration_required,
+        "observability_strategy_required": observability_strategy_required,
     }
 
 
@@ -372,8 +551,9 @@ def validate_fixtures(errors: list[str]) -> None:
         errors.append("tests/fixtures: evaluation fixtures are missing")
         return
     fixtures = sorted(path for path in FIXTURES_ROOT.iterdir() if path.is_dir())
-    if len(fixtures) < 8:
-        errors.append("tests/fixtures: expected at least eight representative scenarios")
+    if len(fixtures) < 15:
+        errors.append("tests/fixtures: expected at least fifteen representative scenarios")
+    covered_fields: set[str] = set()
     for fixture in fixtures:
         expected_path = fixture / "expected.json"
         if not expected_path.is_file():
@@ -381,11 +561,24 @@ def validate_fixtures(errors: list[str]) -> None:
             continue
         expected = json.loads(expected_path.read_text(encoding="utf-8"))
         actual = classify_fixture(fixture)
-        if actual != expected:
+        covered_fields.update(expected)
+        mismatches = {
+            key: {"expected": value, "actual": actual.get(key)}
+            for key, value in expected.items()
+            if actual.get(key) != value
+        }
+        unknown = set(expected) - set(actual)
+        if mismatches or unknown:
             errors.append(
                 f"{fixture.relative_to(REPO_ROOT)}: gate classification mismatch; "
-                f"expected {expected}, got {actual}"
+                f"mismatches {mismatches}, unknown fields {sorted(unknown)}"
             )
+    missing_coverage = set(classify_fixture(fixtures[0])) - covered_fields if fixtures else set()
+    if missing_coverage:
+        errors.append(
+            "tests/fixtures: classifier fields lack explicit expected coverage: "
+            + ", ".join(sorted(missing_coverage))
+        )
 
 
 def validate_e2e(errors: list[str]) -> None:
@@ -397,7 +590,13 @@ def validate_e2e(errors: list[str]) -> None:
     data = json.loads(manifest.read_text(encoding="utf-8"))
     scenarios = data.get("scenarios", [])
     names = {scenario.get("name") for scenario in scenarios}
-    required = {"maven-security-events", "gradle-data-frontend", "partial-resume"}
+    required = {
+        "maven-security-events",
+        "gradle-data-frontend",
+        "partial-resume",
+        "maven-rehost-boot3",
+        "gradle-rehost-boot4",
+    }
     if data.get("schema_version") != 1 or not required.issubset(names):
         errors.append("tests/e2e: required Maven, Gradle, and partial-resume scenarios are missing")
     workflow = REPO_ROOT / ".github" / "workflows" / "compatibility.yml"
@@ -405,9 +604,47 @@ def validate_e2e(errors: list[str]) -> None:
         errors.append("online compatibility workflow is missing")
     else:
         workflow_text = workflow.read_text(encoding="utf-8")
-        for required_text in ("schedule:", "workflow_dispatch:", "--mode build", "--mode runtime"):
+        for required_text in (
+            "schedule:",
+            "workflow_dispatch:",
+            "java: [\"17\", \"21\", \"25\"]",
+            "--mode build",
+            "--mode runtime",
+            "run_agent_eval.py --mode static",
+            "run_production_evals.py --mode static",
+        ):
             if required_text not in workflow_text:
                 errors.append(f"compatibility workflow is missing {required_text!r}")
+
+
+def validate_evaluation_harnesses(errors: list[str]) -> None:
+    agent_manifest = AGENT_EVAL_ROOT / "scenarios.json"
+    agent_runner = SKILL_ROOT / "scripts" / "run_agent_eval.py"
+    if not agent_manifest.is_file() or not agent_runner.is_file():
+        errors.append("tests/agent-evals: manifest and agent-in-the-loop runner are required")
+    else:
+        data = json.loads(agent_manifest.read_text(encoding="utf-8"))
+        if data.get("schema_version") != 1 or not data.get("scenarios"):
+            errors.append("tests/agent-evals: at least one versioned scenario is required")
+        for scenario in data.get("scenarios", []):
+            for key in ("name", "source", "prompt", "required_paths", "required_text", "build"):
+                if key not in scenario:
+                    errors.append(f"tests/agent-evals: scenario is missing {key!r}")
+
+    production_manifest = PRODUCTION_ROOT / "scenarios.json"
+    production_runner = SKILL_ROOT / "scripts" / "run_production_evals.py"
+    if not production_manifest.is_file() or not production_runner.is_file():
+        errors.append("tests/production: manifest and integration evidence runner are required")
+    else:
+        data = json.loads(production_manifest.read_text(encoding="utf-8"))
+        scenarios = data.get("scenarios", [])
+        if data.get("schema_version") != 1 or len(scenarios) < 3:
+            errors.append("tests/production: at least three versioned integration scenarios are required")
+        for scenario in scenarios:
+            if len(scenario.get("failure_cases", [])) < 3:
+                errors.append(
+                    f"tests/production: {scenario.get('name', '<unnamed>')} needs at least three failure cases"
+                )
 
 
 def main() -> int:
@@ -417,6 +654,7 @@ def main() -> int:
     validate_links(errors)
     validate_fixtures(errors)
     validate_e2e(errors)
+    validate_evaluation_harnesses(errors)
     if not (REPO_ROOT / "LICENSE").is_file():
         errors.append("repository is missing LICENSE")
 

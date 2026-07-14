@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "name": "simple-rest-rewrite",
+      "source": "simple-rest-rewrite/input",
+      "prompt": "simple-rest-rewrite/prompt.md",
+      "required_paths": [
+        "pom.xml",
+        "migration-report.md",
+        "src/main/liberty/config/server.xml"
+      ],
+      "required_text": [
+        "jakarta.ws.rs",
+        "liberty-maven-plugin",
+        "cdi-4.1",
+        "restfulWS-4.0",
+        "jsonb-3.0",
+        "complexity-gate",
+        "messaging",
+        "batch-scheduling",
+        "Integration/recovery parity",
+        "Evidence level:"
+      ],
+      "forbidden_text": [
+        "org.springframework",
+        "spring-boot-starter",
+        "spring-boot-maven-plugin",
+        "Evidence level: ANALYZED",
+        "Evidence level: COMPILED"
+      ],
+      "forbid_unresolved_migration_todo": true,
+      "build": [
+        ["mvn", "-B", "-ntp", "clean", "test", "package"]
+      ]
+    }
+  ]
+}

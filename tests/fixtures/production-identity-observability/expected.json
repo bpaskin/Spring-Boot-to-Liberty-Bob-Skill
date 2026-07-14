@@ -1,0 +1,6 @@
+{
+  "security_strategy_required": true,
+  "security_test_gap": false,
+  "identity_integration_required": true,
+  "observability_strategy_required": true
+}

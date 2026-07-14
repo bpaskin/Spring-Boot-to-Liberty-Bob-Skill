@@ -1,0 +1,2 @@
+# Custom starter AutoConfiguration.imports registration must be inventoried before migration.
+example.CustomAutoConfiguration

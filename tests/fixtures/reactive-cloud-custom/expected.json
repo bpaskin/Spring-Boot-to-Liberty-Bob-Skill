@@ -1,0 +1,14 @@
+{
+  "complex_stack_strategy_required": true,
+  "reactive_strategy_required": true,
+  "cloud_strategy_required": true,
+  "integration_strategy_required": false,
+  "custom_starter_strategy_required": true,
+  "messaging_strategy_required": false,
+  "batch_strategy_required": false,
+  "soap_strategy_required": false,
+  "nonrelational_strategy_required": false,
+  "external_data_strategy_required": false,
+  "identity_integration_required": false,
+  "observability_strategy_required": false
+}

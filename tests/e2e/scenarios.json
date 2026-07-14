@@ -40,6 +40,46 @@
       "allow_spring_after": true,
       "required_after": ["org.springframework", "jakarta.ws.rs", "Gate result: PARTIAL", "Resume point:"],
       "forbidden_after": []
+    },
+    {
+      "name": "maven-rehost-boot3",
+      "build_system": "maven",
+      "before": "maven-rehost-boot3/before",
+      "after": "maven-rehost-boot3/after",
+      "allow_spring_after": true,
+      "required_after": ["org.springframework", "springBoot-3.0", "<springBootApplication", "liberty-maven-plugin", "spring-boot-project"],
+      "forbidden_after": [],
+      "build": [["mvn", "-B", "-ntp", "clean", "test", "package"]],
+      "compatibility": [
+        ["mvn", "-B", "-ntp", "liberty:create", "liberty:deploy"],
+        ["target/liberty/wlp/bin/featureUtility", "installServerFeatures", "defaultServer", "--acceptLicense"]
+      ],
+      "runtime": {
+        "start": ["target/liberty/wlp/bin/server", "start", "defaultServer"],
+        "timeout_seconds": 120,
+        "probes": [{"url": "http://127.0.0.1:19180/hello", "status": 200, "contains": "boot3-on-liberty"}],
+        "stop": ["target/liberty/wlp/bin/server", "stop", "defaultServer"]
+      }
+    },
+    {
+      "name": "gradle-rehost-boot4",
+      "build_system": "gradle",
+      "before": "gradle-rehost-boot4/before",
+      "after": "gradle-rehost-boot4/after",
+      "allow_spring_after": true,
+      "required_after": ["org.springframework", "springBoot-4.0", "<springBootApplication", "io.openliberty.tools.gradle.Liberty", "apps = [bootJar]"],
+      "forbidden_after": [],
+      "build": [["gradle", "--no-daemon", "clean", "test", "bootJar"]],
+      "compatibility": [
+        ["gradle", "--no-daemon", "deploy"],
+        ["build/wlp/bin/featureUtility", "installServerFeatures", "defaultServer", "--acceptLicense"]
+      ],
+      "runtime": {
+        "start": ["build/wlp/bin/server", "start", "defaultServer"],
+        "timeout_seconds": 120,
+        "probes": [{"url": "http://127.0.0.1:19280/hello", "status": 200, "contains": "boot4-on-liberty"}],
+        "stop": ["build/wlp/bin/server", "stop", "defaultServer"]
+      }
     }
   ]
 }

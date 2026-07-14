@@ -1,0 +1,5 @@
+{
+  "complex_stack_strategy_required": true,
+  "messaging_strategy_required": true,
+  "deployment_artifacts_present": true
+}

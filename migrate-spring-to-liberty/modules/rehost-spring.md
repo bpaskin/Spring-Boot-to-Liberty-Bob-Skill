@@ -34,15 +34,15 @@ For Maven executable JAR deployment, configure the Liberty plugin to deploy the 
 <plugin>
     <groupId>io.openliberty.tools</groupId>
     <artifactId>liberty-maven-plugin</artifactId>
-    <version>3.11.4</version>
+    <version>3.12.0</version>
     <configuration>
         <serverName>defaultServer</serverName>
-        <installAppPackages>spring-boot-project</installAppPackages>
+        <deployPackages>spring-boot-project</deployPackages>
     </configuration>
 </plugin>
 ```
 
-The `spring-boot-maven-plugin` must remain earlier in the plugin list so it creates the executable artifact before Liberty deploys it. Some direct `deploy`-goal documentation names the parameter `deployPackages`; use only the parameter documented for the selected plugin version and goal, and record the verification rather than including both by guesswork.
+The `spring-boot-maven-plugin` must remain earlier in the plugin list so it creates the executable artifact before Liberty deploys it. If a different plugin version or lifecycle is selected, use only the deployment parameter documented for that exact version and goal, and record the verification rather than including multiple parameters by guesswork.
 
 For Gradle, preserve the Spring Boot plugin and `bootJar`/`bootWar` task, add `io.openliberty.tools.gradle.Liberty`, and configure deployment from the actual generated Boot artifact. Do not apply the rewrite module's `war`/Jandex substitutions. Verify the exact Gradle plugin configuration against its current documentation and the produced artifact before starting Liberty.
 
@@ -57,7 +57,7 @@ Spring Boot 3 web example:
 <server description="Rehost Spring Boot on Open Liberty">
     <featureManager>
         <feature>springBoot-3.0</feature>
-        <feature>servlet-6.1</feature>
+        <feature>servlet-6.0</feature>
     </featureManager>
 
     <httpEndpoint id="defaultHttpEndpoint"
@@ -70,7 +70,7 @@ Spring Boot 3 web example:
 </server>
 ```
 
-Use `springBoot-4.0` for Boot 4. Add a WebSocket or Pages feature only when the matching starter or application behavior requires it. Do not add `appSecurity`, Jakarta REST, or MicroProfile features merely because similarly named Spring starters exist; retain the starter implementation.
+Use `springBoot-4.0` with `servlet-6.1` for Boot 4. Do not combine Boot 3's Jakarta EE 10-based `servlet-6.0` graph with Jakarta EE 11 features: `featureUtility installServerFeatures` must reject incompatible singleton generations. Add a WebSocket or Pages feature only when the matching starter or application behavior requires it. Do not add `appSecurity`, Jakarta REST, or MicroProfile features merely because similarly named Spring starters exist; retain the starter implementation.
 
 Derive `{ACTUAL_BOOT_ARTIFACT}` after packaging from Maven `artifactId`/`version`/`finalName` or Gradle `bootJar`/`bootWar` output. Do not hard-code an example filename. Use `<springBootApplication>`, not `<webApplication>`, for optimized Spring Boot deployment.
 

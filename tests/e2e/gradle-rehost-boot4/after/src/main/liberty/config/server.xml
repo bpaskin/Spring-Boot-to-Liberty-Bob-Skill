@@ -1,0 +1,8 @@
+<server description="Spring Boot 4 rehost golden scenario">
+  <featureManager>
+    <feature>springBoot-4.0</feature>
+    <feature>servlet-6.1</feature>
+  </featureManager>
+  <httpEndpoint id="defaultHttpEndpoint" host="*" httpPort="19280" httpsPort="19643"/>
+  <springBootApplication location="rehost-boot4.jar"/>
+</server>
