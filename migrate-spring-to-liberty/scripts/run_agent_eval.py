@@ -34,6 +34,15 @@ def scenario_by_name(name: str) -> dict:
     raise ValueError(f"unknown agent evaluation scenario: {name}")
 
 
+def scenario_source(scenario: dict) -> Path:
+    source = (EVAL_ROOT / scenario.get("source", "")).resolve()
+    try:
+        source.relative_to(REPO_ROOT.resolve())
+    except ValueError as exc:
+        raise ValueError(f"{scenario.get('name')}: source escapes the repository") from exc
+    return source
+
+
 def tree_text(root: Path) -> str:
     parts: list[str] = []
     for path in sorted(root.rglob("*")):
@@ -55,12 +64,27 @@ def validate_manifest() -> list[str]:
             errors.append(f"invalid or duplicate agent evaluation name: {name!r}")
             continue
         names.add(name)
-        source = EVAL_ROOT / scenario.get("source", "")
+        try:
+            source = scenario_source(scenario)
+        except ValueError as exc:
+            errors.append(str(exc))
+            continue
         prompt = EVAL_ROOT / scenario.get("prompt", "")
         if not source.is_dir():
             errors.append(f"{name}: source directory is missing")
         if not prompt.is_file():
             errors.append(f"{name}: prompt file is missing")
+        else:
+            try:
+                prompt.read_text(encoding="utf-8").format(
+                    workspace="/isolated/workspace",
+                    skill_path="/isolated/skill",
+                    contract=scenario.get("contract", ""),
+                )
+            except (KeyError, ValueError) as exc:
+                errors.append(f"{name}: prompt template cannot be rendered: {exc}")
+        if scenario.get("prompt") == "contract/prompt.md" and not scenario.get("contract"):
+            errors.append(f"{name}: contract prompt requires a non-empty contract")
         for field in ("required_paths", "required_text", "forbidden_text"):
             value = scenario.get(field)
             if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
@@ -68,13 +92,25 @@ def validate_manifest() -> list[str]:
         for command in scenario.get("build", []):
             if not isinstance(command, list) or not command or not all(isinstance(arg, str) for arg in command):
                 errors.append(f"{name}: build commands must be non-empty argument arrays")
-    if "simple-rest-rewrite" not in names:
-        errors.append("agent evaluations must include simple-rest-rewrite")
+    required = {
+        "simple-rest-rewrite",
+        "mvc-data-security-rewrite",
+        "messaging-staged",
+        "batch-staged",
+        "data-xa-staged",
+        "identity-observability-staged",
+        "reactive-cloud-staged",
+        "multi-module-staged",
+        "boot3-rehost",
+        "boot4-rehost",
+    }
+    if not required.issubset(names):
+        errors.append(f"agent evaluations are missing {sorted(required - names)}")
     return errors
 
 
 def prepare_workspace(scenario: dict, workspace: Path) -> None:
-    source = EVAL_ROOT / scenario["source"]
+    source = scenario_source(scenario)
     if workspace.exists() and any(workspace.iterdir()):
         raise ValueError(f"workspace must be absent or empty: {workspace}")
     workspace.mkdir(parents=True, exist_ok=True)
@@ -131,7 +167,11 @@ def run_agent(scenario: dict, command_json: str, keep_workspace: bool) -> int:
         prompt_template = (EVAL_ROOT / scenario["prompt"]).read_text(encoding="utf-8")
         prompt_file = temp / "prompt.md"
         prompt_file.write_text(
-            prompt_template.format(workspace=workspace, skill_path=SKILL_ROOT),
+            prompt_template.format(
+                workspace=workspace,
+                skill_path=SKILL_ROOT,
+                contract=scenario.get("contract", ""),
+            ),
             encoding="utf-8",
         )
         command = resolve_agent_command(command_json, workspace, prompt_file)

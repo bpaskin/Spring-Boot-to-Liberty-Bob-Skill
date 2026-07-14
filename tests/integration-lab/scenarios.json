@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "name": "postgres-xa-schema",
+      "services": ["postgres"],
+      "smoke": ["postgres", "pg_isready", "-U", "liberty", "-d", "liberty"],
+      "endpoints": [
+        {"environment": "LAB_POSTGRES_JDBC_URL", "service": "postgres", "port": 5432, "template": "jdbc:postgresql://127.0.0.1:{port}/liberty"}
+      ]
+    },
+    {
+      "name": "oidc-observability",
+      "services": ["keycloak", "otel-collector"],
+      "probes": [
+        {"service": "keycloak", "port": 9000, "path": "/health/ready"},
+        {"service": "otel-collector", "port": 13133, "path": "/"}
+      ],
+      "endpoints": [
+        {"environment": "LAB_KEYCLOAK_URL", "service": "keycloak", "port": 8080, "template": "http://127.0.0.1:{port}"},
+        {"environment": "LAB_OTEL_GRPC_ENDPOINT", "service": "otel-collector", "port": 4317, "template": "http://127.0.0.1:{port}"},
+        {"environment": "LAB_OTEL_HTTP_ENDPOINT", "service": "otel-collector", "port": 4318, "template": "http://127.0.0.1:{port}"}
+      ]
+    },
+    {
+      "name": "kafka-deployment",
+      "services": ["kafka"],
+      "smoke": ["kafka", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"],
+      "endpoints": [
+        {"environment": "LAB_KAFKA_BOOTSTRAP_SERVERS", "service": "kafka", "port": 29092, "template": "127.0.0.1:{port}"}
+      ]
+    }
+  ]
+}

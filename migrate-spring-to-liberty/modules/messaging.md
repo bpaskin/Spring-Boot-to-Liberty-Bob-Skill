@@ -1,6 +1,6 @@
 # Module: Messaging and Integration Flows
 
-Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md). Run only for a rewrite scope with Spring Kafka, JMS, AMQP/RabbitMQ, Pulsar, Spring Cloud Stream, or Spring Integration messaging behavior.
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md) and [complex adapter contract](../references/complex-adapter-contract.md). Run only for a rewrite scope with Spring Kafka, JMS, AMQP/RabbitMQ, Pulsar, Spring Cloud Stream, or Spring Integration messaging behavior.
 
 If the contract selects rehost, mark `SKIP` and preserve Spring messaging configuration and tests.
 

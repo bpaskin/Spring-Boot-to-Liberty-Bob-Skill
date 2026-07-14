@@ -16,6 +16,8 @@ FIXTURES_ROOT = REPO_ROOT / "tests" / "fixtures"
 E2E_ROOT = REPO_ROOT / "tests" / "e2e"
 AGENT_EVAL_ROOT = REPO_ROOT / "tests" / "agent-evals"
 PRODUCTION_ROOT = REPO_ROOT / "tests" / "production"
+INTEGRATION_LAB_ROOT = REPO_ROOT / "tests" / "integration-lab"
+TOOLING_ROOT = REPO_ROOT / "tests" / "tooling"
 
 INVALID_TEXT = {
     "<feature>beanValidation-3.1</feature>": "Jakarta EE 11 uses validation-3.1",
@@ -183,6 +185,18 @@ def validate_invariants(errors: list[str]) -> None:
     skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
     if "Every module must have exactly one row" not in skill_text:
         errors.append("SKILL.md is missing the final ledger completeness check")
+    for required_text in (
+        "analyze_project.py",
+        "migration-characterization.json",
+        "verify_parity.py",
+        "staged-migration",
+        "data-xa-schema",
+        "identity-observability",
+        "reactive-cloud",
+        "soap-nonrelational",
+    ):
+        if required_text not in skill_text:
+            errors.append(f"SKILL.md is missing complex-migration routing {required_text!r}")
 
     security = (SKILL_ROOT / "modules" / "security.md").read_text(encoding="utf-8")
     for required_text in (
@@ -223,6 +237,37 @@ def validate_invariants(errors: list[str]) -> None:
     ):
         if required_text not in complexity:
             errors.append(f"complexity gate is missing safety text {required_text!r}")
+
+    complex_contract = (
+        SKILL_ROOT / "references" / "complex-adapter-contract.md"
+    ).read_text(encoding="utf-8")
+    for required_text in (
+        "DETECT",
+        "CHARACTERIZE",
+        "VERIFY",
+        "ROLL BACK OR CHECKPOINT",
+        "safe_codemods.py",
+        "verify_parity.py",
+    ):
+        if required_text not in complex_contract:
+            errors.append(f"complex adapter contract is missing {required_text!r}")
+
+    complex_modules = {
+        "staged-migration.md": ("bounded slice", "full build"),
+        "data-xa-schema.md": ("XA", "restart"),
+        "identity-observability.md": ("JWKS", "exporter"),
+        "reactive-cloud.md": ("backpressure", "Spring Cloud"),
+        "soap-nonrelational.md": ("SOAP", "Redis"),
+    }
+    for name, markers in complex_modules.items():
+        path = SKILL_ROOT / "modules" / name
+        if not path.is_file():
+            errors.append(f"complex adapter module is missing {name}")
+            continue
+        text = path.read_text(encoding="utf-8")
+        for marker in markers:
+            if marker not in text:
+                errors.append(f"{name} is missing safety text {marker!r}")
 
     messaging = (SKILL_ROOT / "modules" / "messaging.md").read_text(encoding="utf-8")
     for required_text in ("offset", "dead-letter", "ordering", "Kafka", "JMS", "RabbitMQ"):
@@ -551,8 +596,8 @@ def validate_fixtures(errors: list[str]) -> None:
         errors.append("tests/fixtures: evaluation fixtures are missing")
         return
     fixtures = sorted(path for path in FIXTURES_ROOT.iterdir() if path.is_dir())
-    if len(fixtures) < 15:
-        errors.append("tests/fixtures: expected at least fifteen representative scenarios")
+    if len(fixtures) < 16:
+        errors.append("tests/fixtures: expected at least sixteen representative scenarios")
     covered_fields: set[str] = set()
     for fixture in fixtures:
         expected_path = fixture / "expected.json"
@@ -612,6 +657,7 @@ def validate_e2e(errors: list[str]) -> None:
             "--mode runtime",
             "run_agent_eval.py --mode static",
             "run_production_evals.py --mode static",
+            "run_integration_lab.py --mode static",
         ):
             if required_text not in workflow_text:
                 errors.append(f"compatibility workflow is missing {required_text!r}")
@@ -624,8 +670,8 @@ def validate_evaluation_harnesses(errors: list[str]) -> None:
         errors.append("tests/agent-evals: manifest and agent-in-the-loop runner are required")
     else:
         data = json.loads(agent_manifest.read_text(encoding="utf-8"))
-        if data.get("schema_version") != 1 or not data.get("scenarios"):
-            errors.append("tests/agent-evals: at least one versioned scenario is required")
+        if data.get("schema_version") != 1 or len(data.get("scenarios", [])) < 10:
+            errors.append("tests/agent-evals: at least ten versioned scenarios are required")
         for scenario in data.get("scenarios", []):
             for key in ("name", "source", "prompt", "required_paths", "required_text", "build"):
                 if key not in scenario:
@@ -645,6 +691,62 @@ def validate_evaluation_harnesses(errors: list[str]) -> None:
                 errors.append(
                     f"tests/production: {scenario.get('name', '<unnamed>')} needs at least three failure cases"
                 )
+
+    lab_manifest = INTEGRATION_LAB_ROOT / "scenarios.json"
+    lab_runner = SKILL_ROOT / "scripts" / "run_integration_lab.py"
+    if not lab_manifest.is_file() or not lab_runner.is_file():
+        errors.append("tests/integration-lab: manifest and disposable lab runner are required")
+    else:
+        data = json.loads(lab_manifest.read_text(encoding="utf-8"))
+        if data.get("schema_version") != 1 or len(data.get("scenarios", [])) < 3:
+            errors.append("tests/integration-lab: at least three versioned scenarios are required")
+        lab_text = lab_runner.read_text(encoding="utf-8")
+        compose_text = (INTEGRATION_LAB_ROOT / "compose.yaml").read_text(encoding="utf-8")
+        for required_text in (
+            "--confirm-disposable",
+            "--test-command-json",
+            "COMPOSE_PROJECT_NAME",
+            '"down", "--volumes"',
+        ):
+            if required_text not in lab_text:
+                errors.append(f"disposable lab runner is missing {required_text!r}")
+        for required_text in ("LAB_KAFKA_PORT", "EXTERNAL://127.0.0.1:"):
+            if required_text not in compose_text:
+                errors.append(f"disposable lab compose is missing {required_text!r}")
+
+    required_tools = {
+        "analyze_project.py",
+        "generate_characterization.py",
+        "generate_liberty_config.py",
+        "safe_codemods.py",
+        "verify_parity.py",
+        "run_integration_lab.py",
+    }
+    missing_tools = sorted(
+        name for name in required_tools if not (SKILL_ROOT / "scripts" / name).is_file()
+    )
+    if missing_tools:
+        errors.append(f"deterministic migration tools are missing {missing_tools}")
+    else:
+        codemod = (SKILL_ROOT / "scripts" / "safe_codemods.py").read_text(encoding="utf-8")
+        for required_text in (
+            "javax.annotation.processing",
+            "javax.transaction.xa",
+            "javax.sql",
+            "javax.cache",
+            "--confirm-apply",
+        ):
+            if required_text not in codemod:
+                errors.append(f"safe codemod is missing protected boundary {required_text!r}")
+    if not (TOOLING_ROOT / "test_tooling.py").is_file():
+        errors.append("tests/tooling/test_tooling.py is required")
+
+    validate_workflow = REPO_ROOT / ".github" / "workflows" / "validate.yml"
+    if validate_workflow.is_file():
+        workflow_text = validate_workflow.read_text(encoding="utf-8")
+        for required_text in ("test_tooling.py", "run_integration_lab.py --mode static"):
+            if required_text not in workflow_text:
+                errors.append(f"validate workflow is missing {required_text!r}")
 
 
 def main() -> int:

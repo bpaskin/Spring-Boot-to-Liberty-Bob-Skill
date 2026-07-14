@@ -22,7 +22,7 @@ For a hosting-only assessment, ask:
 Analyze whether this Spring Boot application can be rehosted on Open Liberty without rewriting Spring code. Do not change files until you show the inventory and scope choices.
 ```
 
-The skill first inventories the build, Java APIs, configuration, views, tests, security, and operational requirements. It then records a read-only baseline and one consolidated migration contract before changing the project.
+The skill first generates a deterministic project inventory, then verifies the build, Java APIs, module graph, configuration, views, tests, security, and operational requirements. It records a read-only baseline, a characterization contract, and one consolidated migration contract before changing production code.
 
 ## Compatibility
 
@@ -39,7 +39,7 @@ The skill first inventories the build, Java APIs, configuration, views, tests, s
 
 - WebFlux and Reactor pipelines do not have a mechanical Jakarta EE equivalent; redesign them deliberately or use staged migration.
 - Security rewrites use a dedicated gate and contract for filter chains, OAuth2/OIDC/JWT, registries, method expressions, sessions/logout, CORS/CSRF, trust, and anonymous/authenticated/forbidden tests. Complex expressions still require application-specific policy design.
-- WebFlux/R2DBC, Spring Cloud, Spring Integration, custom starters, SOAP/RPC, messaging, batch/scheduling, and non-relational stores pass a hard preflight gate. Complete removal is blocked until each detected stack has a dedicated module, retained-library strategy, redesign, or staged exception.
+- WebFlux/R2DBC, Spring Cloud, Spring Integration, custom starters, SOAP/RPC, messaging, batch/scheduling, data/XA/schema, identity/telemetry, and non-relational stores route through dedicated adapters. Complete removal remains blocked until each detected stack has a characterized route.
 - Kafka/JMS/RabbitMQ migrations preserve broker topology, schemas, headers, ordering, acknowledgment/offset ownership, retries/dead letters, transactions, security, recovery, and shutdown semantics; a dependency swap alone is not sufficient.
 - Spring Batch and scheduling migrations preserve job identity, parameters, checkpoints/restart, repository ownership, misfire/overlap policy, time zones, cluster behavior, and operational controls.
 - Scheduling expressions and concurrency semantics must be verified; Spring, Enterprise Beans timers, Jakarta Concurrency, and Quartz are not interchangeable.
@@ -57,7 +57,7 @@ When activated, the skill follows six steps:
 
 ### Step 1 — Analyze & choose scope
 
-The skill scans the project and presents a summary table covering:
+The skill runs `scripts/analyze_project.py` to create `migration-inventory.json`, then verifies the evidence and presents a summary table covering:
 
 - **Build file** (`pom.xml` / `build.gradle` / `build.gradle.kts`) — Spring Boot version, starters, plugins
 - **Java source code** — Spring imports, annotations, API calls, configuration, repositories, security, reactive flows, messaging, batch/scheduling, SOAP/RPC, custom extensions, and bootstrap code
@@ -73,7 +73,7 @@ The user then chooses a migration scope:
 | **Staged migration** | Migrates a selected slice and documents the remaining Spring dependencies and interoperability risks. |
 | **Retain Spring and rehost** | Preserves Spring code, starters, configuration, and tests while adding Liberty packaging, deployment configuration, and runtime verification. Best when Liberty hosting—not framework removal—is the goal. |
 
-For rehosting, the skill verifies Spring Boot 3/4 eligibility and preserves Spring starters. For rewrite scopes, MicroProfile complements Jakarta EE rather than replacing it, and optional capabilities are added only when the application needs them.
+For rehosting, the skill verifies Spring Boot 3/4 eligibility and preserves Spring starters. For rewrite scopes, MicroProfile complements Jakarta EE rather than replacing it, and optional capabilities are added only when the application needs them. Complex eligible applications default to rehost-first staged slices unless the user confirms a complete rewrite and every critical adapter contract.
 
 ---
 
@@ -81,7 +81,7 @@ For rehosting, the skill verifies Spring Boot 3/4 eligibility and preserves Spri
 
 Before editing, the skill records the original build/test results, pre-existing worktree changes, application bootstrap, routes, views, datasource/schema behavior, security, external services, ports, and runtime constraints. Pre-existing failures remain separate from migration regressions.
 
-It then presents one migration contract with the applicable JDK, exact branch/base, view technology, datasource and non-destructive schema policy, security model, complex-stack routes, async/event/transaction/retry behavior, messaging and batch semantics, external integration test tier, test runtime, optional deployment track, and external-service assumptions. Confirmed choices are not asked again. `migration-report.md` becomes the durable baseline, contract, module ledger, and resume point.
+It then presents one migration contract with the applicable JDK, exact branch/base, view technology, datasource and non-destructive schema policy, security model, complex-stack routes, async/event/transaction/retry behavior, messaging and batch semantics, external integration test tier, test runtime, optional deployment track, and external-service assumptions. Confirmed choices are not asked again. `migration-report.md` becomes the durable baseline, contract, module ledger, and resume point; `migration-characterization.json` defines the positive, negative, outage, restart, and recovery evidence required from both baseline and Liberty target.
 
 If Git isolation is selected, the exact branch choice from the contract is created from the detected base branch. Commit, push, and draft-PR actions still require separate explicit approval.
 
@@ -95,12 +95,17 @@ Each module runs only if its gate condition is met:
 |---|---|---|
 | **jdk** | ALWAYS — stops migration if the JDK is unsupported | Enforces Java 17+ and applies the contract-selected LTS target 17, 21, or 25. |
 | **complexity-gate** | ALWAYS before a rewrite changes build/source files | Inventories reactive, Spring Cloud/Integration, custom starter, messaging, batch, SOAP/RPC, and non-relational stacks; blocks cleanup until each has a confirmed route. |
+| **staged-migration** | Staged scope or complex rehost-first route | Builds module/slice ownership, rehosts first when eligible, and migrates one behavior-characterized boundary at a time. |
 | **rehost-spring** | Contract selects retain Spring; Boot 3/4 and a valid bootstrap are present | Preserves Spring and adds the matching Liberty Spring Boot Support feature, plugin configuration, actual artifact deployment, and scope-aware validation. |
 | **build** | Rewrite scope plus Spring build markers or mixed Spring/Liberty state | Detects Maven/Gradle, handles complete and partial rewrites idempotently, preserves non-Spring runtime dependencies, and migrates runtime configuration. |
 | **code** | Rewrite scope plus Spring APIs, TODOs, or mixed Spring/Jakarta code | Migrates the confirmed non-security source slice while preserving transaction, persistence, scheduling, and configuration semantics. Spring Data repositories follow the contract-selected Jakarta Data 1.0, CDI + `EntityManager`, or staged path. |
 | **async-events** | Rewrite scope plus Spring async/executors/events, advanced transactions, or retry/listener behavior | Builds an execution-semantics matrix and preserves executor, context, event phase/order, transaction, overload, retry, and recovery behavior. |
 | **messaging** | Rewrite scope plus Kafka, JMS, RabbitMQ/AMQP, Spring Cloud Stream, or Spring Integration messaging | Selects a verified broker integration and preserves schema, ordering, acknowledgment/offset, retry/dead-letter, transaction, security, and recovery behavior. |
 | **batch-scheduling** | Rewrite scope plus Spring Batch, Quartz, `@Scheduled`, or task scheduling | Selects Jakarta Batch, retained Quartz, Liberty timers/concurrency, or an external scheduler and verifies restart, checkpoint, misfire, overlap, and cluster behavior. |
+| **data-xa-schema** | External databases, multiple datasources, XA, schema tools, or non-default persistence semantics | Preserves durable data, naming, locking, pool, schema, transaction, and restart-recovery behavior. |
+| **identity-observability** | OIDC/JWT, Actuator, Micrometer, OpenTelemetry, or custom health behavior | Preserves issuer/audience/role policy, fail-closed identity, health groups, metric/trace/log correlation, and exporter failure behavior. |
+| **reactive-cloud** | WebFlux/R2DBC, Spring Cloud, custom starters, or runtime hooks | Requires retained, staged, extracted, or explicitly redesigned semantics with load, backpressure, routing, refresh, and failure evidence. |
+| **soap-nonrelational** | SOAP/RPC, Redis/cache, or non-relational stores | Preserves wire/data schemas, provider lifecycle, consistency, faults, outages, reconnect, and restart behavior. |
 | **security** | Rewrite scope plus Spring Security, filter chains, authorization expressions, OAuth2/OIDC/JWT, registries, sessions, CSRF, or CORS | Builds authentication and route-policy matrices, selects a compatible Liberty/Jakarta mechanism, preserves browser/session behavior, and requires positive and negative parity tests before Spring Security removal. |
 | **frontend** | Rewrite scope plus templates/assets or controller/view-return signals | Loads only the contract-selected Jakarta MVC, Faces, retained Thymeleaf, JSP/static, or REST path. Replaces and negative-tests CSRF protection before removing Spring integration. |
 | **testing** | Any test source, dependency, or configuration | Rewrite scopes migrate Spring-specific tests where needed; rehosting preserves the Spring test suite and adds only missing Liberty-hosted coverage. |
@@ -138,6 +143,8 @@ Nine ordered checks distinguish migration failures, baseline failures, unavailab
 | 8 | External integration and recovery | Contract-selected disposable/Liberty/platform tests pass for applicable database, XA, schema, identity, broker, observability, restart, outage, and recovery cases; unavailable systems are `BLOCKED`, never reported as passes |
 | 9 | Deployment track | Explicitly skipped or validated to the selected files/image/deployment evidence level, including readiness and a failure rollout where applicable |
 
+Complex migrations reach `BEHAVIOR_PARITY_VERIFIED` only when `scripts/verify_parity.py` accepts matching baseline and Liberty evidence artifacts for every required characterization case.
+
 ---
 
 ### Step 5 — Migration report (self-reflection)
@@ -168,6 +175,7 @@ The skill uses canonical mapping references plus conditionally loaded frontend a
 |---|---|
 | [`references/dependency-map.md`](migrate-spring-to-liberty/references/dependency-map.md) | Build module — Spring → Liberty dependency and plugin mapping, JDBC driver placement, individual Jakarta EE 11 / MicroProfile 7 API coordinates |
 | [`references/annotation-map.md`](migrate-spring-to-liberty/references/annotation-map.md) | Code/security modules — DI, REST, Data, Security, Scheduling, Cache, and Lifecycle mapping candidates and boundaries |
+| [`references/complex-adapter-contract.md`](migrate-spring-to-liberty/references/complex-adapter-contract.md) | Common DETECT/CAPTURE/SELECT/CHARACTERIZE/GENERATE/MIGRATE/VERIFY/RECOVER lifecycle for every complex stack |
 | [`references/jakarta-data.md`](migrate-spring-to-liberty/references/jakarta-data.md) | Conditionally loaded Spring Data repository strategy, compatibility inventory, Jakarta Data conversion, and Open Liberty provider guidance |
 | [`references/config-map.md`](migrate-spring-to-liberty/references/config-map.md) | Build module — `application.properties` property migration covering server, datasource, JPA, logging, profiles, CORS, cache, security, health, and static resources |
 | [`references/jakarta-ee11-liberty-features.md`](migrate-spring-to-liberty/references/jakarta-ee11-liberty-features.md) | Canonical Jakarta EE 11 and MicroProfile feature names, Maven/Gradle coordinates, profile membership, JCache provider guidance, security examples, and typical `<featureManager>` sets |
@@ -186,6 +194,7 @@ The skill uses canonical mapping references plus conditionally loaded frontend a
 |---|---|
 | [`modules/jdk.md`](migrate-spring-to-liberty/modules/jdk.md) | JDK version check — supports 17, 21, 25 |
 | [`modules/complexity-gate.md`](migrate-spring-to-liberty/modules/complexity-gate.md) | Hard preflight for non-mechanical reactive, Cloud, Integration, custom starter, messaging, batch, SOAP/RPC, and non-relational stacks |
+| [`modules/staged-migration.md`](migrate-spring-to-liberty/modules/staged-migration.md) | Rehost-first and bounded-slice orchestration for complex and multi-module applications |
 | [`modules/rehost-spring.md`](migrate-spring-to-liberty/modules/rehost-spring.md) | Hosting-only route for Spring Boot 3/4 using Liberty Spring Boot Support without a framework rewrite |
 | [`modules/build.md`](migrate-spring-to-liberty/modules/build.md) | Build system dispatcher + `server.xml` / MicroProfile Config creation |
 | [`modules/build-maven.md`](migrate-spring-to-liberty/modules/build-maven.md) | Maven-specific migration (`pom.xml`, `liberty-maven-plugin`, `jandex-maven-plugin`) |
@@ -194,6 +203,10 @@ The skill uses canonical mapping references plus conditionally loaded frontend a
 | [`modules/async-events.md`](migrate-spring-to-liberty/modules/async-events.md) | Async executors, CDI events, transaction propagation/phase, Spring Retry/listeners, recovery, and overload semantics |
 | [`modules/messaging.md`](migrate-spring-to-liberty/modules/messaging.md) | Kafka, JMS, RabbitMQ/AMQP, Stream, and Integration topology/semantics with real broker failure checks |
 | [`modules/batch-scheduling.md`](migrate-spring-to-liberty/modules/batch-scheduling.md) | Batch jobs, checkpoints/restart, scheduling, Quartz, overlap/misfire, clustering, and operational controls |
+| [`modules/data-xa-schema.md`](migrate-spring-to-liberty/modules/data-xa-schema.md) | Datasources, persistence, schema tools, XA, and restart recovery |
+| [`modules/identity-observability.md`](migrate-spring-to-liberty/modules/identity-observability.md) | OIDC/JWT, health, metrics, telemetry, and fail-closed identity behavior |
+| [`modules/reactive-cloud.md`](migrate-spring-to-liberty/modules/reactive-cloud.md) | Reactive pipelines, Spring Cloud, custom starters, and runtime extensions |
+| [`modules/soap-nonrelational.md`](migrate-spring-to-liberty/modules/soap-nonrelational.md) | SOAP/RPC, caches, and non-relational clients/providers |
 | [`modules/security.md`](migrate-spring-to-liberty/modules/security.md) | Dedicated security gate for authentication, authorization, OAuth2/OIDC/JWT, registries, sessions/logout, CORS/CSRF, trust, and negative tests |
 | [`modules/frontend.md`](migrate-spring-to-liberty/modules/frontend.md) | View-layer scenario router, static assets, and verified CSRF replacement |
 | [`modules/testing.md`](migrate-spring-to-liberty/modules/testing.md) | Jakarta-compatible MicroShed integration tests, JUnit 5, Mockito, and optional REST Assured |
@@ -223,9 +236,11 @@ Before contributing an update, run:
 
 ```bash
 python3 migrate-spring-to-liberty/scripts/validate_skill.py
+python3 tests/tooling/test_tooling.py
+python3 migrate-spring-to-liberty/scripts/run_integration_lab.py --mode static
 ```
 
-The validator checks frontmatter, internal links, canonical Jakarta EE 11 and Spring Boot feature declarations, destructive schema examples, known nonportable mappings, module safety invariants, 15 gate-classification fixtures, and the golden/evaluation manifests. The same static checks run on every pull request.
+The validator checks frontmatter, internal links, canonical Jakarta EE 11 and Spring Boot feature declarations, destructive schema examples, known nonportable mappings, module safety invariants, 16 gate-classification fixtures, deterministic tooling, the disposable integration-lab contract, and the golden/evaluation manifests. The same static checks run on every pull request.
 
 ### Evaluation fixtures
 
@@ -246,6 +261,7 @@ The validator checks frontmatter, internal links, canonical Jakarta EE 11 and Sp
 | [`production-data-xa`](tests/fixtures/production-data-xa) | PostgreSQL, multiple datasources/XA, Flyway/Liquibase, rollback, restart, and schema-failure contract markers |
 | [`production-identity-observability`](tests/fixtures/production-identity-observability) | OIDC/JWT, Actuator, Micrometer/OpenTelemetry, authorization, issuer, readiness, and exporter outage markers |
 | [`production-kafka-deployment`](tests/fixtures/production-kafka-deployment) | Kafka listener, image/deployment probes, poison record, broker outage, rebalance, and shutdown markers |
+| [`multi-module-enterprise`](tests/fixtures/multi-module-enterprise) | Maven reactor with separate Boot API/security and Kafka worker boundaries for dependency-ordered staged migration |
 
 Each fixture includes `expected.json`. The validator derives its build, code, frontend, and testing gates; repository, async/event, security, reactive, messaging, batch, SOAP, non-relational, external-data, identity, and observability strategy requirements; deployment artifacts; missing security-test coverage; and rehost eligibility.
 
@@ -261,13 +277,16 @@ With Maven, Gradle, a compatible JDK, and network access, `--mode build` compile
 
 ### Agent and production evaluations
 
-The agent harness copies a raw Spring project to an isolated workspace, gives an external agent only the migration prompt and this skill, then grades the resulting files and executes its build:
+The agent harness contains ten black-box scenarios spanning simple and security rewrites, messaging, batch, XA, identity/telemetry, reactive/Cloud, multi-module staging, and Boot 3/4 rehosting. It copies a raw Spring project to an isolated workspace, gives an external agent only the scenario contract and this skill, then grades the resulting files and executes the selected build:
 
 ```bash
 python3 migrate-spring-to-liberty/scripts/run_agent_eval.py --mode static
 python3 migrate-spring-to-liberty/scripts/run_agent_eval.py --mode run \
+  --scenario reactive-cloud-staged \
   --agent-command-json '["your-agent", "--workspace", "{workspace}", "--prompt", "{prompt_file}"]'
 ```
+
+The manual/reusable [black-box agent workflow](.github/workflows/agent-evals.yml) runs one scenario or the full matrix when the repository supplies `AGENT_EVAL_COMMAND_JSON` for an isolated installed agent.
 
 The production harness validates explicit positive and failure contracts for PostgreSQL/XA/schema tools, OIDC/telemetry, and Kafka/deployment. [`tests/production/README.md`](tests/production/README.md) defines the evidence format. `evidence` mode accepts only named real environments with a non-empty artifact/log and observed result for every required case; compile-only or unavailable-dependency claims do not pass:
 
@@ -276,6 +295,30 @@ python3 migrate-spring-to-liberty/scripts/run_production_evals.py --mode static
 python3 migrate-spring-to-liberty/scripts/run_production_evals.py --mode evidence \
   --evidence-root /path/to/real-evidence
 ```
+
+The disposable lab provides pinned PostgreSQL, Kafka, Keycloak, and OpenTelemetry services. Static validation is non-mutating; starting containers requires the explicit confirmation flag and always tears down owned resources. An optional JSON-array command runs while the lab is alive and receives resolved `LAB_*` endpoint variables plus `COMPOSE_PROJECT_NAME`/`COMPOSE_FILE` for controlled failure injection:
+
+```bash
+python3 migrate-spring-to-liberty/scripts/run_integration_lab.py --mode static
+python3 migrate-spring-to-liberty/scripts/run_integration_lab.py \
+  --mode run \
+  --scenario kafka-deployment \
+  --confirm-disposable \
+  --evidence-root evidence/lab \
+  --test-cwd /path/to/migrated-app \
+  --test-command-json '["./mvnw", "-B", "verify", "-Pintegration"]'
+```
+
+## Deterministic migration tools
+
+| Tool | Purpose |
+|---|---|
+| `analyze_project.py` | Generates module-aware `migration-inventory.json` and routes detected capabilities to adapters |
+| `generate_characterization.py` | Generates baseline/target positive, failure, outage, and recovery cases |
+| `generate_liberty_config.py` | Produces a reviewable rehost or rewrite `server.xml` scaffold without overwriting by default |
+| `safe_codemods.py` | Dry-runs an idempotent allowlist of Jakarta namespace changes while preserving `javax.sql`, JCache, and Java SE namespaces |
+| `verify_parity.py` | Requires matching normalized behavior signatures and non-empty evidence artifacts |
+| `run_integration_lab.py` | Resolves isolated endpoints, runs an optional test command, captures logs, and unconditionally cleans up disposable services |
 
 ---
 

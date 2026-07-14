@@ -25,6 +25,17 @@ For each integration, record the exact product/version, protocol, endpoint owner
 
 Do not collapse unavailable infrastructure into a passing test. Record `BLOCKED` with the missing product, permission, credential, or network dependency and the command that would resume the test.
 
+## Disposable lab workflow
+
+1. Generate and review `migration-inventory.json` and `migration-characterization.json`.
+2. Validate the bundled lab without mutation: `python3 migrate-spring-to-liberty/scripts/run_integration_lab.py --mode static`.
+3. Start only the required named lab scenario with `--mode run --confirm-disposable --evidence-root <directory>` and pass the application/integration command as a JSON argument array.
+4. Consume the runner-provided `LAB_*` endpoints and ephemeral credentials from the test-command environment without copying them into tracked files. Use `COMPOSE_PROJECT_NAME` and `COMPOSE_FILE` only for contracted outage/restart injection against the owned lab.
+5. Execute every applicable characterization and production-manifest case, including failure injection and restart recovery.
+6. Grade baseline/target behavior with `verify_parity.py`, then grade complete real-environment artifacts with `run_production_evals.py --mode evidence`.
+
+The lab contains pinned PostgreSQL, Kafka, Keycloak, and OpenTelemetry service definitions. It does not simulate a target Kubernetes/OpenShift rollout, managed identity service, enterprise broker, production schema volume, or platform policy; require target-platform parity when those differences can change behavior.
+
 ## Safety
 
 - Pin container images by reviewed tag or digest and verify their provenance according to project policy.

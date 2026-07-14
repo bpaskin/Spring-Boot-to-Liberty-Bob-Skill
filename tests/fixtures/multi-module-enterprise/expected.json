@@ -1,0 +1,7 @@
+{
+  "complex_stack_strategy_required": true,
+  "messaging_strategy_required": true,
+  "security_strategy_required": true,
+  "security_test_gap": true,
+  "rehost_candidate": true
+}

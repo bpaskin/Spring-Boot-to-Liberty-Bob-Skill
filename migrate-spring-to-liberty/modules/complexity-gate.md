@@ -1,23 +1,32 @@
 # Module: Non-Mechanical Stack Preflight
 
-Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md). Run this read-only gate immediately after the JDK check and before changing the build or source code for a rewrite.
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md) and [complex adapter contract](../references/complex-adapter-contract.md). Run this read-only gate immediately after the JDK check and before changing the build or source code for a rewrite.
 
 If the contract selects retain Spring and rehost, record the detected stacks for runtime parity, mark this module `SKIP — rewrite not selected`, and preserve them.
 
 ## Inventory
 
+Run the deterministic analyzer first, then confirm its evidence through semantic inspection:
+
+```bash
+python3 migrate-spring-to-liberty/scripts/analyze_project.py . \
+  --output migration-inventory.json
+```
+
 Inspect dependencies, imports, annotations, configuration, generated metadata, and runtime behavior for:
 
 | Stack | Representative evidence | Required route |
 |---|---|---|
-| Reactive web/data | WebFlux, Reactor `Mono`/`Flux`, functional routes, RSocket, R2DBC, reactive transactions | explicit reactive redesign or staged retention |
-| Spring Cloud | Gateway, Config, OpenFeign, discovery, load balancing, Circuit Breaker, Stream, Function, Task, Vault, Kubernetes | capability-by-capability architecture contract |
-| Spring Integration | channels, gateways, adapters, pollers, aggregators, splitters, routers, message stores | messaging module plus explicit flow topology |
+| Reactive web/data | WebFlux, Reactor `Mono`/`Flux`, functional routes, RSocket, R2DBC, reactive transactions | [reactive/Cloud adapter](reactive-cloud.md) |
+| Spring Cloud | Gateway, Config, OpenFeign, discovery, load balancing, Circuit Breaker, Stream, Function, Task, Vault, Kubernetes | [reactive/Cloud adapter](reactive-cloud.md) |
+| Spring Integration | channels, gateways, adapters, pollers, aggregators, splitters, routers, message stores | [messaging module](messaging.md) plus explicit flow topology; use [reactive/Cloud adapter](reactive-cloud.md) for non-messaging runtime behavior |
 | Messaging | Kafka, JMS, AMQP/RabbitMQ, Pulsar, Spring Cloud Stream | [messaging module](messaging.md) |
 | Batch and scheduling | Spring Batch, Quartz, `@Scheduled`, task scheduling, clustered locks | [batch/scheduling module](batch-scheduling.md) |
-| SOAP and RPC | Spring Web Services, CXF, WSDL, SOAP interceptors, GraphQL, gRPC | explicit protocol contract and verified implementation |
-| Custom Spring runtime | custom starters, auto-configuration imports, `ImportSelector`, bean factory/registry post-processors, custom scopes, AOP/advisors | project-specific design or staged retention |
-| Non-relational data/cache | Redis, MongoDB, Elasticsearch, Cassandra, Neo4j, custom cache managers | explicit client/provider, lifecycle, consistency, and failure contract |
+| Data/XA/schema | external databases, multiple datasources, XA, Flyway/Liquibase, naming and locking behavior | [data/XA/schema adapter](data-xa-schema.md) |
+| Identity/observability | OIDC/JWT, JWKS, Actuator, Micrometer, OpenTelemetry, health groups | [identity/observability adapter](identity-observability.md) |
+| SOAP and RPC | Spring Web Services, CXF, WSDL, SOAP interceptors, GraphQL, gRPC | [SOAP/non-relational adapter](soap-nonrelational.md) |
+| Custom Spring runtime | custom starters, auto-configuration imports, `ImportSelector`, bean factory/registry post-processors, custom scopes, AOP/advisors | [reactive/Cloud adapter](reactive-cloud.md) |
+| Non-relational data/cache | Redis, MongoDB, Elasticsearch, Cassandra, Neo4j, custom cache managers | [SOAP/non-relational adapter](soap-nonrelational.md) |
 
 Do not classify a stack from a dependency name alone. Trace its call sites, configuration, tests, and operational ownership. Conversely, do not miss programmatic usage merely because a starter is absent.
 
@@ -31,7 +40,7 @@ For each detected stack, record one strategy:
 4. `STAGED_EXCEPTION` — leave the Spring slice and its dependencies intact, name its boundary, and do not claim complete removal.
 5. `REHOST` — preserve the whole Spring application on Liberty.
 
-Mark this module `BLOCKED` when any detected stack lacks one of these strategies or when its baseline semantics are unknown. While blocked:
+Load the routed adapter immediately after detection. Mark this module `BLOCKED` when any detected stack lacks one of these strategies or when its baseline semantics are unknown. While blocked:
 
 - do not remove its dependencies, configuration, generated metadata, or tests;
 - do not run cleanup over its files;
@@ -52,6 +61,8 @@ Record, as applicable:
 - positive, negative, overload, unavailable-dependency, restart, and recovery tests.
 
 Mark `PASS` only when every detected stack has a confirmed strategy and its dependent module can proceed. Mark `SKIP` only after an evidence-backed scan finds none.
+
+For a complex Boot 3/4 application, default to [rehost first and migrate bounded slices](staged-migration.md) unless the user has already confirmed a complete rewrite and every critical adapter has baseline characterization evidence.
 
 ## Primary references
 

@@ -7,6 +7,8 @@
       "prompt": "simple-rest-rewrite/prompt.md",
       "required_paths": [
         "pom.xml",
+        "migration-inventory.json",
+        "migration-characterization.json",
         "migration-report.md",
         "src/main/liberty/config/server.xml"
       ],
@@ -17,8 +19,6 @@
         "restfulWS-4.0",
         "jsonb-3.0",
         "complexity-gate",
-        "messaging",
-        "batch-scheduling",
         "Integration/recovery parity",
         "Evidence level:"
       ],
@@ -30,9 +30,98 @@
         "Evidence level: COMPILED"
       ],
       "forbid_unresolved_migration_todo": true,
-      "build": [
-        ["mvn", "-B", "-ntp", "clean", "test", "package"]
-      ]
+      "build": [["mvn", "-B", "-ntp", "clean", "test", "package"]]
+    },
+    {
+      "name": "mvc-data-security-rewrite",
+      "source": "../fixtures/mvc-jpa-security",
+      "prompt": "contract/prompt.md",
+      "contract": "Remove Spring completely; target JDK 21; stay in the isolated workspace; use Jakarta REST plus the existing server-rendered Thymeleaf templates; use CDI plus EntityManager for persistence; use Liberty application security with JWT, preserve route ordering, CSRF, CORS, sessions, logout, and 401/403 behavior; use Maven; no external deployment; run all available tests; do not commit or push.",
+      "required_paths": ["pom.xml", "migration-inventory.json", "migration-characterization.json", "migration-report.md", "src/main/liberty/config/server.xml"],
+      "required_text": ["jakarta", "appSecurity-6.0", "security", "frontend", "Evidence level:"],
+      "forbidden_text": ["org.springframework", "spring-boot-starter", "Evidence level: ANALYZED"],
+      "forbid_unresolved_migration_todo": true,
+      "build": [["mvn", "-B", "-ntp", "clean", "test", "package"]]
+    },
+    {
+      "name": "messaging-staged",
+      "source": "../fixtures/messaging-integration",
+      "prompt": "contract/prompt.md",
+      "contract": "Use a staged migration on JDK 21. Retain the Kafka, RabbitMQ, and Spring Integration slice as STAGED_EXCEPTION until acknowledgment, ordering, retry/DLQ, transaction, and recovery behavior have baseline evidence. Generate the inventory, characterization contract, adapter ledger, and exact resume point; do not remove Spring messaging code; no deployment, commit, or push.",
+      "required_paths": ["migration-inventory.json", "migration-characterization.json", "migration-report.md"],
+      "required_text": ["org.springframework", "STAGED_EXCEPTION", "messaging", "Resume point:"],
+      "forbidden_text": ["Evidence level: BEHAVIOR_PARITY_VERIFIED"],
+      "build": []
+    },
+    {
+      "name": "batch-staged",
+      "source": "../fixtures/batch-scheduling",
+      "prompt": "contract/prompt.md",
+      "contract": "Use a staged migration on JDK 21. Retain Spring Batch, Quartz, and scheduling as STAGED_EXCEPTION until job identity, checkpoint, restart, time-zone, overlap, and misfire behavior are characterized. Generate the inventory, characterization contract, adapter ledger, and resume command; do not remove production code; no deployment, commit, or push.",
+      "required_paths": ["migration-inventory.json", "migration-characterization.json", "migration-report.md"],
+      "required_text": ["org.springframework", "STAGED_EXCEPTION", "batch-scheduling", "Resume point:"],
+      "forbidden_text": ["Evidence level: BEHAVIOR_PARITY_VERIFIED"],
+      "build": []
+    },
+    {
+      "name": "data-xa-staged",
+      "source": "../fixtures/production-data-xa",
+      "prompt": "contract/prompt.md",
+      "contract": "Use a staged migration on JDK 21. Retain the existing Spring data/XA/schema slice until PostgreSQL, both enlisted resources, Flyway/Liquibase ownership, second-resource failure, and restart recovery are demonstrated with disposable infrastructure. Generate the inventory, characterization contract, data-xa-schema ledger, and resume command; keep schema action non-destructive; no commit or push.",
+      "required_paths": ["migration-inventory.json", "migration-characterization.json", "migration-report.md"],
+      "required_text": ["org.springframework", "data-xa-schema", "schema action", "Resume point:"],
+      "forbidden_text": ["drop-and-create", "Evidence level: BEHAVIOR_PARITY_VERIFIED"],
+      "build": []
+    },
+    {
+      "name": "identity-observability-staged",
+      "source": "../fixtures/production-identity-observability",
+      "prompt": "contract/prompt.md",
+      "contract": "Use a staged migration on JDK 21. Retain Spring Security, OIDC, Actuator, Micrometer, and OpenTelemetry until issuer/audience/role, 401/403, JWKS rotation, readiness, and exporter-outage behavior are characterized. Generate inventory, characterization, identity-observability ledger, and resume command; never weaken security or embed secrets; no commit or push.",
+      "required_paths": ["migration-inventory.json", "migration-characterization.json", "migration-report.md"],
+      "required_text": ["org.springframework", "identity-observability", "401", "403", "Resume point:"],
+      "forbidden_text": ["Evidence level: BEHAVIOR_PARITY_VERIFIED"],
+      "build": []
+    },
+    {
+      "name": "reactive-cloud-staged",
+      "source": "../fixtures/reactive-cloud-custom",
+      "prompt": "contract/prompt.md",
+      "contract": "Use a staged migration on JDK 21. Retain WebFlux, R2DBC, Gateway, OpenFeign, and custom auto-configuration as STAGED_EXCEPTION; do not convert reactive code to blocking APIs. Generate inventory, characterization, reactive-cloud adapter ledger, load/failure requirements, and resume command; no deployment, commit, or push.",
+      "required_paths": ["migration-inventory.json", "migration-characterization.json", "migration-report.md"],
+      "required_text": ["org.springframework", "STAGED_EXCEPTION", "reactive-cloud", "backpressure", "Resume point:"],
+      "forbidden_text": ["Evidence level: BEHAVIOR_PARITY_VERIFIED", "replace with blocking"],
+      "build": []
+    },
+    {
+      "name": "multi-module-staged",
+      "source": "../fixtures/multi-module-enterprise",
+      "prompt": "contract/prompt.md",
+      "contract": "Use a rehost-first staged migration on JDK 21. Treat api and worker as separate bounded slices, preserve their full-reactor build order, retain Kafka and security until characterized, and generate module ownership, inventory, characterization, staged-migration ledger, and resume commands. Do not commit or push.",
+      "required_paths": ["api/pom.xml", "worker/pom.xml", "migration-inventory.json", "migration-characterization.json", "migration-report.md"],
+      "required_text": ["multi_module", "staged-migration", "api", "worker", "Resume point:"],
+      "forbidden_text": ["Evidence level: BEHAVIOR_PARITY_VERIFIED"],
+      "build": []
+    },
+    {
+      "name": "boot3-rehost",
+      "source": "../fixtures/rehost-spring-boot",
+      "prompt": "contract/prompt.md",
+      "contract": "Retain Spring Boot 3 and rehost unchanged on Open Liberty; target JDK 21; use the full executable Maven artifact and context root /; preserve Spring configuration and tests; generate inventory and characterization evidence; run build and a time-bounded Liberty smoke test when available; no deployment, commit, or push.",
+      "required_paths": ["pom.xml", "migration-inventory.json", "migration-characterization.json", "migration-report.md", "src/main/liberty/config/server.xml"],
+      "required_text": ["org.springframework", "springBoot-3.0", "<springBootApplication", "REHOSTED — SPRING RETAINED"],
+      "forbidden_text": ["Spring-free", "Evidence level: ANALYZED"],
+      "build": [["mvn", "-B", "-ntp", "clean", "test", "package"]]
+    },
+    {
+      "name": "boot4-rehost",
+      "source": "../e2e/gradle-rehost-boot4/before",
+      "prompt": "contract/prompt.md",
+      "contract": "Retain Spring Boot 4 and rehost unchanged on Open Liberty; target JDK 21; use the full executable Gradle bootJar and context root /; preserve Spring configuration and tests; generate inventory and characterization evidence; run build and a time-bounded Liberty smoke test when available; no deployment, commit, or push.",
+      "required_paths": ["build.gradle", "migration-inventory.json", "migration-characterization.json", "migration-report.md", "src/main/liberty/config/server.xml"],
+      "required_text": ["org.springframework", "springBoot-4.0", "<springBootApplication", "REHOSTED — SPRING RETAINED"],
+      "forbidden_text": ["Spring-free", "Evidence level: ANALYZED"],
+      "build": [["gradle", "--no-daemon", "clean", "test", "bootJar"]]
     }
   ]
 }

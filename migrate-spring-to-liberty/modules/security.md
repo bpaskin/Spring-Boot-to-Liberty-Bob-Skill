@@ -1,6 +1,6 @@
 # Module: Security
 
-Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md). Security migration is a behavior-preservation exercise, not an annotation cleanup.
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md) and [complex adapter contract](../references/complex-adapter-contract.md). Security migration is a behavior-preservation exercise, not an annotation cleanup.
 
 If the contract selects retain Spring and rehost, log this module as `SKIP` and stop. Preserve Spring Security, its `SecurityFilterChain`, dependencies, configuration, and tests on that path.
 

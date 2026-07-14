@@ -26,6 +26,8 @@ jobs:
           python migrate-spring-to-liberty/scripts/validate_skill.py
           python migrate-spring-to-liberty/scripts/run_agent_eval.py --mode static
           python migrate-spring-to-liberty/scripts/run_production_evals.py --mode static
+          python migrate-spring-to-liberty/scripts/run_integration_lab.py --mode static
+          python tests/tooling/test_tooling.py
 
   golden-rewrites:
     runs-on: ubuntu-latest

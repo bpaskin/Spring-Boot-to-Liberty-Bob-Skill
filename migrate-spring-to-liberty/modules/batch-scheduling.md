@@ -1,6 +1,6 @@
 # Module: Batch and Scheduling
 
-Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md). Run for rewrite scopes that contain Spring Batch, Quartz, `@Scheduled`, `TaskScheduler`, cron/fixed-delay work, or mixed migrated jobs.
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md) and [complex adapter contract](../references/complex-adapter-contract.md). Run for rewrite scopes that contain Spring Batch, Quartz, `@Scheduled`, `TaskScheduler`, cron/fixed-delay work, or mixed migrated jobs.
 
 If the contract selects rehost, mark `SKIP` and preserve Spring's scheduler/job repository and configuration.
 

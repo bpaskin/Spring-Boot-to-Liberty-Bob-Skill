@@ -1,6 +1,6 @@
 # Module: Async, Events, Transactions, and Retry
 
-Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md). This module owns Spring execution semantics that cannot be preserved by replacing annotations in the general code module.
+Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md) and [complex adapter contract](../references/complex-adapter-contract.md). This module owns Spring execution semantics that cannot be preserved by replacing annotations in the general code module.
 
 If the contract selects retain Spring and rehost, log `SKIP` and preserve Spring's executors, events, transaction interceptors, and retry infrastructure unchanged.
 

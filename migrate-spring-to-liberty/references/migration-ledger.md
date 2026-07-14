@@ -29,6 +29,8 @@ Record before any migration edit:
 - Authentication/authorization:
 - Container runtime, ports, and network constraints:
 - Pre-existing failures/blockers:
+- Generated inventory: `migration-inventory.json` command/result and reviewed false positives/negatives
+- Characterization contract: `migration-characterization.json` and baseline evidence root
 ```
 
 Do not mutate the project to improve the baseline. If a command is unsafe or would require unavailable infrastructure, record `BLOCKED` and why.
@@ -64,8 +66,19 @@ Initialize all rows before editing:
 | Module | Gate | State | Evidence / changed files | Validation | Resume point |
 |---|---|---|---|---|---|
 | jdk | ALWAYS | NOT_STARTED | | | |
+| complexity-gate | rewrite/staged preflight | NOT_STARTED | | | |
+| staged-migration | staged/complex route | NOT_STARTED | | | |
+| rehost-spring | rehost route | NOT_STARTED | | | |
 | build | | NOT_STARTED | | | |
 | code | | NOT_STARTED | | | |
+| async-events | | NOT_STARTED | | | |
+| messaging | | NOT_STARTED | | | |
+| batch-scheduling | | NOT_STARTED | | | |
+| data-xa-schema | | NOT_STARTED | | | |
+| identity-observability | | NOT_STARTED | | | |
+| reactive-cloud | | NOT_STARTED | | | |
+| soap-nonrelational | | NOT_STARTED | | | |
+| security | | NOT_STARTED | | | |
 | frontend | | NOT_STARTED | | | |
 | testing | | NOT_STARTED | | | |
 | cleanup | ALWAYS | NOT_STARTED | | | |
@@ -86,6 +99,8 @@ For each module:
 5. Run the module validation and inspect the resulting diff.
 6. Verify pre-existing user edits are still present.
 7. Record `PASS`, `PARTIAL`, or `BLOCKED` with exact evidence and a resume point.
+
+For complex adapters, record the inventory capability ID, bounded slice, baseline behavior signatures, generated scaffolding/codemod manifest, target evidence, failure/recovery cases, and parity-grader result. Do not replace these artifacts with a prose-only claim.
 
 If validation fails, diagnose first. Reverse only edits created by the current module and only when they do not overlap pre-existing work. Never use a broad reset, checkout, restore, stash, or clean. If surgical rollback is unsafe, leave the evidence, mark `BLOCKED`, and request direction.
 

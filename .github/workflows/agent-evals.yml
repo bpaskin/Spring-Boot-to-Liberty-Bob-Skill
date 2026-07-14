@@ -1,0 +1,73 @@
+name: Black-box migration agent evaluations
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Scenario to run, or all scenarios sequentially
+        required: true
+        default: simple-rest-rewrite
+        type: choice
+        options:
+          - simple-rest-rewrite
+          - mvc-data-security-rewrite
+          - messaging-staged
+          - batch-staged
+          - data-xa-staged
+          - identity-observability-staged
+          - reactive-cloud-staged
+          - multi-module-staged
+          - boot3-rehost
+          - boot4-rehost
+          - all
+  workflow_call:
+    inputs:
+      scenario:
+        required: false
+        default: simple-rest-rewrite
+        type: string
+    secrets:
+      AGENT_EVAL_COMMAND_JSON:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  black-box-agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      AGENT_EVAL_COMMAND_JSON: ${{ secrets.AGENT_EVAL_COMMAND_JSON }}
+      REQUESTED_SCENARIO: ${{ inputs.scenario }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: semeru
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate evaluation manifest
+        run: python migrate-spring-to-liberty/scripts/run_agent_eval.py --mode static
+      - name: Require a configured isolated agent command
+        run: test -n "$AGENT_EVAL_COMMAND_JSON"
+      - name: Run black-box migration evaluations
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$REQUESTED_SCENARIO" == "all" ]]; then
+            while IFS= read -r scenario; do
+              python migrate-spring-to-liberty/scripts/run_agent_eval.py \
+                --mode run \
+                --scenario "$scenario"
+            done < <(python -c 'import json; print("\n".join(s["name"] for s in json.load(open("tests/agent-evals/scenarios.json"))["scenarios"]))')
+          else
+            python migrate-spring-to-liberty/scripts/run_agent_eval.py \
+              --mode run \
+              --scenario "$REQUESTED_SCENARIO"
+          fi
