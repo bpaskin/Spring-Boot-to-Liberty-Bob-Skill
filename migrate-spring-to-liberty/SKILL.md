@@ -28,6 +28,7 @@ Load the relevant reference file when working on a module:
 |---|---|
 | [references/dependency-map.md](references/dependency-map.md) | Build module: dependency and plugin mapping |
 | [references/annotation-map.md](references/annotation-map.md) | Code module: annotation, DI, REST, Data, Security migration |
+| [references/jakarta-data.md](references/jakarta-data.md) | Code/build modules only when Spring Data repositories are present |
 | [references/config-map.md](references/config-map.md) | Build module: configuration property migration |
 | [references/jakarta-ee11-liberty-features.md](references/jakarta-ee11-liberty-features.md) | Canonical Jakarta EE 11 and MicroProfile-to-Liberty feature mapping |
 | [references/migration-ledger.md](references/migration-ledger.md) | Every run: baseline, consolidated contract, module transactions, and resume behavior |
@@ -73,7 +74,8 @@ Then present one **Migration Contract** containing only applicable decisions and
 - target JDK (17, 21, or 25)
 - exact branch name and base branch, or an explicit choice to stay on the current branch
 - view technology when server-rendered Spring MVC or Thymeleaf is present
-- datasource/environment assumptions and schema policy; default schema action to `none`
+- datasource/environment assumptions, explicit Jakarta Data `dataStore` binding when applicable, and schema policy; default schema action to `none` and Liberty table creation/removal to disabled
+- repository strategy when Spring Data repositories are present: Jakarta Data 1.0, CDI + `EntityManager`, or a documented staged exception
 - authentication source and authorization expectations when Spring Security is present
 - test approach and whether a compatible container runtime is available
 - known external-service constraints and which runtime checks may be blocked

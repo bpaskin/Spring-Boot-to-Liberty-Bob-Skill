@@ -35,6 +35,7 @@ The skill first inventories the build, Java APIs, configuration, views, tests, s
 - Spring Batch, Spring Integration, Spring Cloud, and custom Spring extensions require project-specific migration plans.
 - Scheduling expressions and concurrency semantics must be verified; Spring, Enterprise Beans timers, Jakarta Concurrency, and Quartz are not interchangeable.
 - `spring.jpa.hibernate.ddl-auto=update` has no portable Jakarta Persistence equivalent. Schema generation defaults to `none`; use a reviewed migration tool for durable environments.
+- Spring Data repositories can migrate to Jakarta Data 1.0 when their CRUD and query semantics are supported, or to CDI + `EntityManager` when explicit persistence control is required. The skill inventories incompatible Spring Data extensions instead of treating Jakarta Data as a drop-in replacement, binds repositories to an explicit datastore, and disables Liberty table creation/removal by default.
 - Applications without tests can be migrated, but the result cannot claim behavioral parity until representative positive, negative, and security cases exist.
 - Never remove working CSRF protection, authentication, authorization, secrets handling, or transaction boundaries before the replacement is configured and tested.
 
@@ -83,7 +84,7 @@ Each module runs only if its gate condition is met:
 |---|---|---|
 | **jdk** | ALWAYS — stops migration if the JDK is unsupported | Enforces Java 17+ and applies the contract-selected LTS target 17, 21, or 25. |
 | **build** | Spring build markers, or mixed Spring/Liberty build state | Detects Maven/Gradle, handles complete and partial migrations idempotently, preserves non-Spring runtime dependencies, and migrates runtime configuration. |
-| **code** | Spring imports, API calls, TODOs, or mixed Spring/Jakarta code | Migrates the confirmed source slice while preserving transaction, security, persistence, scheduling, and configuration semantics. Schema generation defaults to `none`; destructive actions require a named environment, usable backup, exact impact, and explicit approval. |
+| **code** | Spring imports, API calls, TODOs, or mixed Spring/Jakarta code | Migrates the confirmed source slice while preserving transaction, security, persistence, scheduling, and configuration semantics. Spring Data repositories follow the contract-selected Jakarta Data 1.0, CDI + `EntityManager`, or staged path. Schema generation defaults to `none`; destructive actions require a named environment, usable backup, exact impact, and explicit approval. |
 | **frontend** | Templates/assets or controller/view-return signals | Loads only the contract-selected Jakarta MVC, Faces, retained Thymeleaf, JSP/static, or REST path. Replaces and negative-tests CSRF protection before removing Spring integration. |
 | **testing** | Any test source, dependency, or configuration | Preserves plain JUnit tests, migrates Spring tests where needed, and compares counts/results with baseline. When no tests exist, the module is skipped and the ledger records a coverage risk. |
 | **cleanup** | ALWAYS — runs after all other modules | Removes leftover Spring imports; converts only explicitly mapped Jakarta EE APIs from `javax.*` while preserving Java SE and third-party namespaces; removes unused Spring dependencies and stale configuration; creates `beans.xml` when CDI discovery needs it. |
@@ -146,6 +147,7 @@ The skill uses canonical mapping references plus conditionally loaded frontend a
 |---|---|
 | [`references/dependency-map.md`](migrate-spring-to-liberty/references/dependency-map.md) | Build module — Spring → Liberty dependency and plugin mapping, JDBC driver placement, individual Jakarta EE 11 / MicroProfile 7 API coordinates |
 | [`references/annotation-map.md`](migrate-spring-to-liberty/references/annotation-map.md) | Code module — DI, REST, Data, Security, Scheduling, Cache, Lifecycle annotation mapping |
+| [`references/jakarta-data.md`](migrate-spring-to-liberty/references/jakarta-data.md) | Conditionally loaded Spring Data repository strategy, compatibility inventory, Jakarta Data conversion, and Open Liberty provider guidance |
 | [`references/config-map.md`](migrate-spring-to-liberty/references/config-map.md) | Build module — `application.properties` property migration covering server, datasource, JPA, logging, profiles, CORS, cache, security, health, and static resources |
 | [`references/jakarta-ee11-liberty-features.md`](migrate-spring-to-liberty/references/jakarta-ee11-liberty-features.md) | Canonical Jakarta EE 11 and MicroProfile feature names, Maven/Gradle coordinates, profile membership, JCache provider guidance, security examples, and typical `<featureManager>` sets |
 | [`references/migration-ledger.md`](migrate-spring-to-liberty/references/migration-ledger.md) | Baseline, consolidated contract, module state, transaction boundaries, and resume protocol |
@@ -194,7 +196,7 @@ Before contributing an update, run:
 python3 migrate-spring-to-liberty/scripts/validate_skill.py
 ```
 
-The validator checks frontmatter, internal links, canonical Jakarta EE 11 feature declarations, destructive schema examples, known nonportable mappings, security-critical wording, and four gate-classification fixtures. The same checks run in GitHub Actions.
+The validator checks frontmatter, internal links, canonical Jakarta EE 11 feature declarations, destructive schema examples, known nonportable mappings, security-critical wording, and five gate-classification fixtures. The same checks run in GitHub Actions.
 
 ### Evaluation fixtures
 
@@ -204,8 +206,9 @@ The validator checks frontmatter, internal links, canonical Jakarta EE 11 featur
 | [`mvc-jpa-security`](tests/fixtures/mvc-jpa-security) | Spring MVC, Thymeleaf, JPA, Security, CSRF, and Spring integration tests |
 | [`partial-gradle-kotlin`](tests/fixtures/partial-gradle-kotlin) | Mixed Spring/Jakarta Gradle Kotlin project classified as a partial migration |
 | [`no-tests`](tests/fixtures/no-tests) | Spring configuration with no tests; records an explicit coverage risk |
+| [`spring-data-repository`](tests/fixtures/spring-data-repository) | Detects Spring Data repository interfaces and requires an explicit Jakarta Data, `EntityManager`, or staged strategy |
 
-Each fixture includes `expected.json`. The validator derives its build, code, frontend, and testing gates and fails CI when the result changes unexpectedly.
+Each fixture includes `expected.json`. The validator derives its build, code, frontend, and testing gates, plus whether a repository-strategy decision is required, and fails CI when the result changes unexpectedly.
 
 ---
 

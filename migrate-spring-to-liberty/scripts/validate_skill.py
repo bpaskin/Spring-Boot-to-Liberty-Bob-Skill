@@ -28,6 +28,7 @@ INVALID_TEXT = {
     "@LookupIfProperty": "not a portable CDI or MicroProfile annotation",
     "MicroProfile Scheduler (`mpScheduler`)": "there is no mpScheduler feature",
     "Jakarta EE 11 mandates Java 21": "Jakarta EE 11 has a Java 17 minimum",
+    "have no direct Jakarta EE equivalent": "Jakarta EE 11 includes Jakarta Data 1.0",
     "Remove Spring CSRF tokens from HTML and JavaScript": "replace and test CSRF protection first",
     "LibertyServerContainerConfiguration": "MicroShed documents SharedContainerConfiguration with ApplicationContainer",
     "new LibertyServerContainer(": "MicroShed documents ApplicationContainer",
@@ -41,11 +42,13 @@ REQUIRED_CANONICAL_FEATURES = {
     "enterpriseBeansLite-4.0",
     "enterpriseBeans-4.0",
     "messaging-3.1",
+    "data-1.0",
 }
 
 ALLOWED_DECLARED_FEATURES = REQUIRED_CANONICAL_FEATURES | {
     "appSecurity-6.0",
     "cdi-4.1",
+    "dataContainer-1.0",
     "faces-4.1",
     "jakartaee-11.0",
     "jsonb-3.0",
@@ -74,6 +77,7 @@ DANGEROUS_SCHEMA_DECLARATION = re.compile(
     r'<property\s+name="jakarta\.persistence\.schema-generation\.database\.action"'
     r'\s+value="(?:drop|drop-and-create|create|create-only)"\s*/?>'
 )
+DANGEROUS_TABLE_DECLARATION = re.compile(r'(?:createTables|dropTables)="true"')
 
 
 def markdown_files() -> list[Path]:
@@ -119,6 +123,11 @@ def validate_invariants(errors: list[str]) -> None:
             errors.append(
                 f"{path.relative_to(REPO_ROOT)}: destructive schema action appears "
                 "in an executable XML example; examples must default to none"
+            )
+        if DANGEROUS_TABLE_DECLARATION.search(text):
+            errors.append(
+                f"{path.relative_to(REPO_ROOT)}: destructive Liberty table action "
+                "appears in an executable example; examples must default to false"
             )
 
     canonical = (
@@ -225,6 +234,13 @@ def classify_fixture(root: Path) -> dict[str, str | bool]:
         "frontend": frontend,
         "testing": testing,
         "coverage_risk": not bool(test_files),
+        "repository_strategy_required": any(
+            marker in main_text
+            for marker in (
+                "org.springframework.data.repository",
+                "org.springframework.data.jpa.repository",
+            )
+        ),
     }
 
 
@@ -233,8 +249,8 @@ def validate_fixtures(errors: list[str]) -> None:
         errors.append("tests/fixtures: evaluation fixtures are missing")
         return
     fixtures = sorted(path for path in FIXTURES_ROOT.iterdir() if path.is_dir())
-    if len(fixtures) < 4:
-        errors.append("tests/fixtures: expected at least four representative scenarios")
+    if len(fixtures) < 5:
+        errors.append("tests/fixtures: expected at least five representative scenarios")
     for fixture in fixtures:
         expected_path = fixture / "expected.json"
         if not expected_path.is_file():

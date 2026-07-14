@@ -4,7 +4,7 @@
 
 - [Dependency injection](#dependency-injection-spring--cdi-41)
 - [REST and web](#rest--web-spring-mvc--jakarta-rest--jax-rs-40)
-- [Data and persistence](#data--jpa-spring-data--jakarta-jpa-32)
+- [Data and persistence](#data--jpa-spring-data--jakarta-data-10-or-jakarta-persistence-32)
 - [Scheduling](#scheduling-spring--jakarta-ee-or-retained-scheduler)
 - [Security](#security-spring-security--microprofile-jwt--jakarta-security)
 - [Caching](#cache-spring-cache--jcache-provider-or-retained-library)
@@ -71,9 +71,9 @@
 - To produce JSON, annotate with `@Produces(MediaType.APPLICATION_JSON)` — Liberty's JSON-B 3.0 handles serialization
 - JAX-RS `@ApplicationPath` on the `Application` class sets the root path
 
-## Data / JPA (Spring Data → Jakarta JPA 3.2)
+## Data / JPA (Spring Data → Jakarta Data 1.0 or Jakarta Persistence 3.2)
 
-| Spring | Jakarta JPA 3.2 | Notes |
+| Spring | Jakarta EE 11 | Notes |
 |---|---|---|
 | `@Entity` | `@Entity` (`jakarta.persistence.Entity`) | Same — only package changes |
 | `@Table` | `@Table` (`jakarta.persistence.Table`) | Same |
@@ -82,11 +82,12 @@
 | `@Column` | `@Column` (`jakarta.persistence.Column`) | Same |
 | `@Transactional` | `@Transactional` (`jakarta.transaction.Transactional`) | **NOT** Spring's `@Transactional` |
 | `@PersistenceContext` | `@PersistenceContext` (`jakarta.persistence.PersistenceContext`) | Injects `EntityManager` |
-| `JpaRepository<T,ID>` | CDI `@ApplicationScoped` bean with `EntityManager` | See code.md for full example |
-| `CrudRepository<T,ID>` | CDI `@ApplicationScoped` bean with `EntityManager` | |
-| `@Query("JPQL")` | `EntityManager.createQuery(...)` or `@NamedQuery` | JPQL is the same |
-| `@Modifying` | `EntityManager.createQuery(...).executeUpdate()` | |
-| `@EnableJpaRepositories` | Not needed | CDI + JPA auto-discovered via `persistence.xml` |
+| `JpaRepository<T,ID>` | Jakarta Data `@Repository` extending `jakarta.data.repository.CrudRepository<T,ID>`, or CDI + `EntityManager` | Choose in the migration contract; Jakarta Data is not full Spring Data parity. See [jakarta-data.md](jakarta-data.md). |
+| Spring Data `CrudRepository<T,ID>` | Jakarta Data `CrudRepository<T,ID>`, or CDI + `EntityManager` | The identically named interfaces have different methods and lifecycle semantics; update imports and call sites deliberately. |
+| Derived query method | Jakarta Data Query by Method Name, `@Find`, or `@Query` | Verify supported keywords, ordering, limiting, null handling, and return types. |
+| `@Query("JPQL")` | Jakarta Data `@Query`, `EntityManager.createQuery(...)`, or `@NamedQuery` | Confirm parameter binding and modifying-query semantics. |
+| `@Modifying` | Jakarta Data lifecycle/`@Query` method or `EntityManager.createQuery(...).executeUpdate()` | No mechanical annotation rename. |
+| `@EnableJpaRepositories` | Not needed | Jakarta Data repositories are discovered through `@Repository`; manual repositories are CDI beans and Jakarta Persistence is configured through `persistence.xml`. |
 | `spring.jpa.hibernate.ddl-auto` | `jakarta.persistence.schema-generation.database.action` in `persistence.xml` | Default to `none`; `update` has no portable equivalent, and destructive values require an explicit environment/backup/impact approval gate |
 
 **JPA 3.2 naming strategy**: EclipseLink (the JPA provider on Liberty) preserves Java field names as-is — there is no naming strategy equivalent to Spring Boot's `SpringPhysicalNamingStrategy`. To match Spring Boot's snake_case column names, add `@Column` explicitly to each entity field:

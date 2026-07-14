@@ -5,11 +5,12 @@ Follow the shared [migration ledger and transaction protocol](../references/migr
 Migrate all Java source code from Spring patterns to Jakarta EE 11 / CDI / JAX-RS equivalents.
 
 Load [references/annotation-map.md](../references/annotation-map.md) before starting. It contains the complete annotation mapping tables for DI, REST, Data, Security, Cache, Scheduling, and Lifecycle.
+When Spring Data repository interfaces are present, also load [references/jakarta-data.md](../references/jakarta-data.md) and apply the repository strategy recorded in the migration contract.
 
 ## What to do
 
 - [ ] Migrate entities (standard JPA 3.2 — `@Entity`, `@Id`, `@GeneratedValue`)
-- [ ] Migrate repositories (CDI `@ApplicationScoped` beans with `EntityManager`)
+- [ ] Migrate repositories with the contract-selected Jakarta Data 1.0 or CDI + `EntityManager` strategy
 - [ ] Migrate service layer (remove Spring stereotypes, use CDI scopes)
 - [ ] Migrate controllers/resources — approach depends on view technology choice (see **Controller Migration** below)
 - [ ] Migrate DI annotations (`@Autowired` → `@Inject`, `@Component`/`@Service` → `@ApplicationScoped`, etc.)
@@ -53,7 +54,36 @@ public class Todo {
 
 ## Repository Layer
 
-Spring Data repositories (`JpaRepository`, `CrudRepository`) have no direct Jakarta EE equivalent. Replace with CDI beans that inject `EntityManager`:
+Jakarta EE 11 includes Jakarta Data 1.0, which can preserve a repository-interface style for supported Spring Data patterns. It is not a drop-in Spring Data implementation: inventory inherited CRUD calls, derived queries, pagination, sorting, projections, specifications, custom fragments, auditing, locking, and exception assumptions before choosing a strategy.
+
+Use the repository strategy from the migration contract:
+
+- **Jakarta Data 1.0** for straightforward CRUD and supported automatic or annotated queries. On Open Liberty, enable `data-1.0` plus `persistence-3.2` for Jakarta Persistence entities. Do not use `dataContainer-1.0` unless a separate Jakarta Data provider is intentionally configured.
+- **CDI + `EntityManager`** for complex or provider-specific behavior, or when explicit query and persistence control is more important than retaining repository interfaces.
+- **Staged exception** when neither path can preserve behavior in the current scope; keep the original code and record a migration TODO.
+
+For a compatible repository, Jakarta Data can retain the interface shape:
+
+```java
+// BEFORE: Spring Data JPA repository
+public interface TodoRepository extends JpaRepository<Todo, Long> {
+    List<Todo> findByCompleted(boolean completed);
+}
+
+// AFTER: Jakarta Data 1.0 repository
+import jakarta.data.repository.CrudRepository;
+import jakarta.data.repository.Repository;
+
+@Repository(dataStore = "TodoStore") // Must match reviewed Liberty configuration.
+public interface TodoRepository extends CrudRepository<Todo, Long> {
+    // Jakarta Data Query by Method Name; verify generated query behavior with a test.
+    List<Todo> findByCompleted(boolean completed);
+}
+```
+
+The Jakarta Data `CrudRepository` lifecycle contract differs from Spring Data. Update call sites deliberately: Jakarta Data exposes `insert`, `update`, and `save`; do not assume Spring Data batching, flush, return collection, or exception behavior. Never leave the repository on an implicit default datasource unless the migration contract explicitly selected it. Bind `dataStore` to a reviewed persistence-unit reference, datasource, or Liberty `databaseStore`, and disable automatic table creation/removal by default. See the dedicated reference for the compatibility and datastore checklists.
+
+For the explicit persistence strategy, replace the interface with a CDI bean that injects `EntityManager`:
 
 ```java
 // BEFORE: Spring Data JPA repository

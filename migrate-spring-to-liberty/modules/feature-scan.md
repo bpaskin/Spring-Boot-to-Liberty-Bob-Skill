@@ -39,6 +39,9 @@ grep -rn "jakarta.persistence\|@Entity\|@PersistenceContext\|@NamedQuery\|Entity
 # Also check for persistence.xml
 ls src/main/resources/META-INF/persistence.xml 2>/dev/null && echo "persistence.xml found"
 
+# Jakarta Data repositories
+grep -rn "jakarta.data" src/main/java/
+
 # Bean Validation
 grep -rn "jakarta.validation\|@NotNull\|@NotBlank\|@Size\|@Min\|@Max\|@Valid\|@Validated" src/main/java/
 
@@ -107,7 +110,7 @@ grep -rn "@Incoming\|@Outgoing\|@Channel\|Emitter\b" src/main/java/
 # Check microprofile-config.properties for mp.jwt or mp.config profile prefixes
 cat src/main/resources/META-INF/microprofile-config.properties 2>/dev/null
 
-# Check server.xml for existing dataSource / library definitions
+# Check server.xml for existing dataSource / databaseStore / data-provider settings
 cat src/main/liberty/config/server.xml
 ```
 
@@ -123,6 +126,7 @@ Use the scan results and the table below to determine which features are require
 | CDI scope/injection annotations or `jakarta.enterprise.*` imports | `cdi-4.1` |
 | `@Path`, `@GET/@POST/@PUT/@DELETE/@PATCH`, `@ApplicationPath`, JAX-RS `Application` class | `restfulWS-4.0` + `jsonb-3.0` + `jsonp-2.1` |
 | `@Entity`, `@PersistenceContext`, `EntityManager`, `persistence.xml` present | `persistence-3.2` |
+| `jakarta.data.*`, Jakarta Data `@Repository`, `DataRepository`, `BasicRepository`, or `CrudRepository` | `data-1.0`; also add `persistence-3.2` for Jakarta Persistence entities |
 | `@NotNull`, `@NotBlank`, `@Valid`, `@Size`, Jakarta Validation imports | `validation-3.1` |
 | `@Transactional` (jakarta.transaction) | `transaction-2.0` |
 | `@RolesAllowed`, `@DeclareRoles`, Security APIs, or an authentication configuration in `server.xml` | `appSecurity-6.0` |
@@ -156,6 +160,8 @@ Always add `jsonb-3.0` and `jsonp-2.1` whenever `restfulWS-4.0` is enabled. This
 
 - **Avoid redundant umbrella and sub-features**: if you keep `jakartaee-11.0`, omit the individual Jakarta EE features it already enables. Redundancy obscures the intended runtime surface; incompatible versions are the actual conflict.
 - **`transaction-2.0` is included in `persistence-3.2`** — omit it if `persistence-3.2` is already in the list.
+- **`data-1.0` includes Open Liberty's relational Jakarta Data provider** — use it for migrated repository interfaces. `dataContainer-1.0` exposes only the Jakarta Data API and is valid only when the application deliberately supplies another provider.
+- **Every Jakarta Data repository needs a reviewed datastore binding** — resolve its `@Repository(dataStore = "...")` value to a persistence-unit reference, datasource, or `databaseStore`. Do not rely on `java:comp/DefaultDataSource` accidentally. Keep `createTables` and `dropTables` disabled unless the destructive-action gate was explicitly satisfied.
 - **`cdi-4.1` is required by almost everything** — if any other feature is present, `cdi-4.1` must also be present.
 - **`appSecurity-6.0` requires an authentication design** — do not infer a registry, OIDC provider, or JWT trust configuration from authorization annotations alone.
 - **`mpJwt-2.1` requires `mpConfig-3.1`** — always add both together.

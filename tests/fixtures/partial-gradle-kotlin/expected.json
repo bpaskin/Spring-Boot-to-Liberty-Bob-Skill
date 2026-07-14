@@ -3,5 +3,6 @@
   "code": "PARTIAL",
   "frontend": "SKIP",
   "testing": "SKIP",
-  "coverage_risk": true
+  "coverage_risk": true,
+  "repository_strategy_required": false
 }

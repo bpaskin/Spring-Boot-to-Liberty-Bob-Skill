@@ -19,7 +19,7 @@
 |---|---|
 | `spring-boot-starter-web` | `jakarta.platform:jakarta.jakartaee-api:11.0.0` (provided) + `restfulWS-4.0` feature |
 | `spring-boot-starter-webflux` | No mechanical equivalent. Preserve behavior requirements, then redesign with Jakarta REST asynchronous APIs plus `concurrent-3.1`, or keep a supported reactive library. Flag Reactor-specific pipelines for manual migration. |
-| `spring-boot-starter-data-jpa` | `jakarta.platform:jakarta.jakartaee-api:11.0.0` (provided) + `persistence-3.2` feature |
+| `spring-boot-starter-data-jpa` | Contract choice: Jakarta Data repositories use `jakarta.platform:jakarta.jakartaee-api:11.0.0` (provided) + `data-1.0` + `persistence-3.2`; manual repositories use the platform API + `persistence-3.2`. Use `dataContainer-1.0` only with an intentionally supplied provider. |
 | `spring-boot-starter-validation` | `jakarta.platform:jakarta.jakartaee-api:11.0.0` (provided) + `validation-3.1` feature |
 | `spring-boot-starter-security` | `jakarta.platform:jakarta.jakartaee-api:11.0.0` + `appSecurity-6.0` feature + an explicitly designed registry, OIDC, or JWT configuration |
 | `spring-boot-starter-actuator` | `org.eclipse.microprofile:microprofile:7.0` (provided) + `mpHealth-4.0` + `mpMetrics-5.1` features |

@@ -85,7 +85,7 @@ In `server.xml`, use `jakartaee-11.0` or `webProfile-11.0` as a convenience feat
 | Jakarta Transactions | 2.0 | `jakarta.transaction:jakarta.transaction-api:2.0.1` | `transaction-2.0` |
 | Jakarta Concurrency | 3.1 | `jakarta.enterprise.concurrent:jakarta.enterprise.concurrent-api:3.1.1` | `concurrent-3.1` |
 | Jakarta CDI (Full) | 4.1 | `jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0`<br>`jakarta.enterprise:jakarta.enterprise.lang-model:4.1.0`<br>`jakarta.enterprise:jakarta.enterprise.cdi-el-api:4.1.0` | `cdi-4.1` |
-| Jakarta Data (**NEW**) | 1.0 | `jakarta.data:jakarta.data-api:1.0.1` | `data-1.0` |
+| Jakarta Data (**NEW**) | 1.0 | `jakarta.data:jakarta.data-api:1.0.1` | `data-1.0` (built-in relational provider) or `dataContainer-1.0` (API only; separate provider required) |
 
 ---
 
