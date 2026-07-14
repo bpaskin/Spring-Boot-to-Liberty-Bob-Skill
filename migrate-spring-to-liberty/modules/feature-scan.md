@@ -2,6 +2,8 @@
 
 After all migration modules have compiled cleanly, scan the migrated Java sources and configuration files to derive the exact set of Open Liberty features the application needs. Replace the placeholder `jakartaee-11.0` / `microProfile-7.0` umbrella features with a precise, minimal feature list.
 
+Load [references/jakarta-ee11-liberty-features.md](../references/jakarta-ee11-liberty-features.md) before deriving the list. Treat it as the canonical mapping and verify uncertain feature names against the Open Liberty feature documentation.
+
 A lean `featureManager` block:
 - Reduces Liberty's startup time and memory footprint
 - Makes the feature surface area explicit and reviewable
@@ -25,7 +27,7 @@ Run each search against `src/main/` (excluding `src/test/`).
 
 ```bash
 # CDI
-grep -rn "jakarta.enterprise\|@ApplicationScoped\|@RequestScoped\|@SessionScoped\|@Inject\|@Produces\|@Named\|@Dependent" src/main/java/
+grep -rn "jakarta.enterprise\|jakarta.inject\|@ApplicationScoped\|@RequestScoped\|@SessionScoped\|@Inject\|@Named\|@Dependent" src/main/java/
 
 # Jakarta REST (JAX-RS)
 grep -rn "jakarta.ws.rs\|@Path\|@GET\|@POST\|@PUT\|@DELETE\|@PATCH\|@ApplicationPath\|@Produces\|@Consumes" src/main/java/
@@ -73,7 +75,7 @@ grep -rn "jakarta.ejb\|@Singleton\|@Schedule\|@Stateless\|@Stateful\|@MessageDri
 grep -rn "@ConfigProperty\|@ConfigProperties\|ConfigProvider" src/main/java/
 
 # MicroProfile Health
-grep -rn "@Liveness\|@Readiness\|@Startup\|HealthCheck\b\|HealthCheckResponse" src/main/java/
+grep -rn "@Liveness\|@Readiness\|HealthCheck\b\|HealthCheckResponse" src/main/java/
 
 # MicroProfile Metrics
 grep -rn "@Counted\|@Timed\|@Gauge\|@ConcurrentGauge\|@Metered\|MetricRegistry\b" src/main/java/
@@ -116,20 +118,20 @@ Use the scan results and the table below to determine which features are require
 
 | If you found … | Add this feature |
 |---|---|
-| `@ApplicationScoped`, `@Inject`, `@Produces`, `CDI` imports | `cdi-4.1` |
+| CDI scope/injection annotations or `jakarta.enterprise.*` imports | `cdi-4.1` |
 | `@Path`, `@GET/@POST/@PUT/@DELETE/@PATCH`, `@ApplicationPath`, JAX-RS `Application` class | `restfulWS-4.0` + `jsonb-3.0` + `jsonp-2.1` |
 | `@Entity`, `@PersistenceContext`, `EntityManager`, `persistence.xml` present | `persistence-3.2` |
-| `@NotNull`, `@NotBlank`, `@Valid`, `@Size`, Bean Validation imports | `beanValidation-3.1` |
+| `@NotNull`, `@NotBlank`, `@Valid`, `@Size`, Jakarta Validation imports | `validation-3.1` |
 | `@Transactional` (jakarta.transaction) | `transaction-2.0` |
-| `@RolesAllowed`, `@DeclareRoles`, `SecurityContext`, `<basicRegistry>` in server.xml | `appSecurity-5.0` |
+| `@RolesAllowed`, `@DeclareRoles`, Security APIs, or an authentication configuration in `server.xml` | `appSecurity-6.0` |
 | `jakarta.faces.*`, `.xhtml` Facelets templates | `faces-4.1` |
 | `jakarta.servlet.*`, `HttpServlet`, `@WebServlet`, `@WebFilter` | `servlet-6.1` |
 | `@ServerEndpoint`, `@ClientEndpoint`, WebSocket imports | `websocket-2.2` |
 | `jakarta.json.bind.*`, `@JsonbProperty`, `Jsonb` | `jsonb-3.0` |
 | `jakarta.json.*`, `JsonObject`, `JsonArray`, `JsonObjectBuilder` | `jsonp-2.1` |
 | `jakarta.mail.*` | `mail-2.1` |
-| `@Stateless`, `@Stateful`, `@MessageDriven` (full EJB) | `ejb-4.0` |
-| `@Singleton` + `@Schedule` (timer only) | `ejbLite-4.0` |
+| `@Stateless`, `@Stateful`, `@MessageDriven` (full Enterprise Beans) | `enterpriseBeans-4.0` |
+| `jakarta.ejb.Singleton` + `@Schedule` (timer only) | `enterpriseBeansLite-4.0` |
 | `@ConfigProperty`, `@ConfigProperties`, `ConfigProvider` | `mpConfig-3.1` |
 | `@Liveness`, `@Readiness`, `HealthCheck` | `mpHealth-4.0` |
 | `@Counted`, `@Timed`, `@Gauge`, `MetricRegistry` | `mpMetrics-5.1` |
@@ -137,10 +139,10 @@ Use the scan results and the table below to determine which features are require
 | `@Retry`, `@Timeout`, `@Fallback`, `@CircuitBreaker`, `@Bulkhead` | `mpFaultTolerance-4.1` |
 | `@Operation`, `@APIResponse`, `@Schema` (OpenAPI) | `mpOpenAPI-4.0` |
 | `@RegisterRestClient`, `@RestClient`, `RestClientBuilder` | `mpRestClient-4.0` |
-| `@WithSpan`, `Tracer`, OpenTelemetry imports | `mpTelemetry-2.0` |
+| MicroProfile Telemetry annotations/configuration or OpenTelemetry integration intended to be container-managed | `mpTelemetry-2.0` |
 | `@Incoming`, `@Outgoing`, `@Channel`, `Emitter` (Reactive Messaging) | `mpReactiveMessaging-3.0` |
 | `<dataSource>` in server.xml or JDBC driver in WAR | `jdbc-4.3` |
-| `<connectionFactory>` or JMS annotations | `messaging-3.0` |
+| `<connectionFactory>` or Jakarta Messaging annotations | `messaging-3.1` |
 | `@CacheResult`, `@CacheRemove`, `JCache` usage | No Liberty feature required — add the JCache provider as a dependency (e.g., Hazelcast, EhCache) and configure `<cachingProvider>` in `server.xml` |
 | `@XmlRootElement`, `@XmlElement`, `@XmlAttribute`, `JAXBContext`, `jakarta.xml.bind.*` imports | `xmlBinding-4.0` + add `jakarta.xml.bind:jakarta.xml.bind-api:4.0.5` (provided) to `pom.xml` |
 
@@ -150,10 +152,10 @@ Always add `jsonb-3.0` and `jsonp-2.1` whenever `restfulWS-4.0` is enabled. This
 
 ### Feature compatibility rules
 
-- **Never mix umbrella and sub-features**: if you keep `jakartaee-11.0`, do **not** also add `cdi-4.1`, `restfulWS-4.0`, etc. — they conflict.
+- **Avoid redundant umbrella and sub-features**: if you keep `jakartaee-11.0`, omit the individual Jakarta EE features it already enables. Redundancy obscures the intended runtime surface; incompatible versions are the actual conflict.
 - **`transaction-2.0` is included in `persistence-3.2`** — omit it if `persistence-3.2` is already in the list.
 - **`cdi-4.1` is required by almost everything** — if any other feature is present, `cdi-4.1` must also be present.
-- **`appSecurity-5.0` requires `cdi-4.1`** — always pair them.
+- **`appSecurity-6.0` requires an authentication design** — do not infer a registry, OIDC provider, or JWT trust configuration from authorization annotations alone.
 - **`mpJwt-2.1` requires `mpConfig-3.1`** — always add both together.
 
 ## Step 3 — Update server.xml
@@ -177,7 +179,7 @@ Replace the umbrella feature block with the minimal computed set. The structure 
     <feature>jsonb-3.0</feature>
     <feature>jsonp-2.1</feature>
     <feature>persistence-3.2</feature>
-    <feature>beanValidation-3.1</feature>
+    <feature>validation-3.1</feature>
     <!-- MicroProfile -->
     <feature>mpConfig-3.1</feature>
     <feature>mpHealth-4.0</feature>
@@ -219,7 +221,7 @@ After updating `server.xml`, install the declared features and recompile to conf
 
 If `liberty:install-feature` reports an unknown feature name:
 - Check the exact name against the [Open Liberty feature list](https://openliberty.io/docs/latest/reference/feature/feature-overview.html)
-- Verify the Liberty version in the plugin configuration supports the feature (e.g., `jakartaee-11.0` requires Open Liberty 24.0.0.6+)
+- Verify the selected Liberty runtime supports every declared feature. Do not rely on a hard-coded first-supported release; run the feature-install goal against the pinned runtime.
 - Correct the name in `server.xml` and re-run
 
 ## Watch out
@@ -228,4 +230,4 @@ If `liberty:install-feature` reports an unknown feature name:
 - **Umbrella features are fine for prototyping**: Switching to a minimal feature set is an optimisation step. If the project is under active development, it is acceptable to keep `jakartaee-11.0` temporarily and revisit this module before production deployment.
 - **Feature order does not matter**: Liberty resolves feature dependencies regardless of declaration order in `<featureManager>`.
 - **`mpConfig-3.1` is nearly always required**: Any class using `@ConfigProperty` or `@ConfigProperties` needs it — and many MicroProfile features implicitly depend on MicroProfile Config at runtime.
-- **Do not add both `ejb-4.0` and `ejbLite-4.0`**: `ejb-4.0` is a superset; use `ejbLite-4.0` for timer/scheduler-only use cases.
+- **Do not add both `enterpriseBeans-4.0` and `enterpriseBeansLite-4.0`**: the full feature is a superset; use the Lite feature for supported timer/scheduler-only use cases.

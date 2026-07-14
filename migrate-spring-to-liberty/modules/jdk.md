@@ -9,7 +9,7 @@ This phase has no preconditions — it must **always** run as the very first ste
 ## Instructions
 
 - **DO NOT** skip this phase.
-- The valid supported Java versions for this migration are **17**, **21**, and **25**.
+- Jakarta EE 11 requires Java 17 or newer. This workflow targets the supported LTS JDKs **17**, **21**, and **25**.
 - [ ] Check the installed JDK version:
   ```bash
   java -version
@@ -30,5 +30,5 @@ This phase has no preconditions — it must **always** run as the very first ste
 
 ## Notes
 
-- Open Liberty supports JDK 17, 21, and 25.
+- Jakarta EE 11 has a Java 17 minimum. Open Liberty supports JDK 17, 21, and 25 for this workflow; default to 21 when the project has no documented runtime policy.
 - IBM Semeru Runtimes (https://developer.ibm.com/languages/java/semeru-runtimes/) are the recommended JDK for production workloads on Open Liberty / WebSphere Liberty.

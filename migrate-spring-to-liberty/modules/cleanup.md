@@ -30,13 +30,13 @@ For each hit:
 - If it's an unused import → delete it
 - If there is no equivalent and removal breaks the build → leave a `// TODO: Migration required — <reason>` comment
 
-Also search for `javax.*` imports that should have become `jakarta.*`:
+Also search for `javax.*` imports that might represent Jakarta EE APIs from older applications:
 
 ```bash
 grep -rn "import javax\." src/
 ```
 
-Replace each `javax.` prefix with `jakarta.` for all Jakarta EE 11 APIs (persistence, inject, enterprise, ws, validation, transaction, servlet, json, etc.).
+Convert only packages covered by an explicit Jakarta EE mapping, such as persistence, inject, enterprise, validation, transaction, servlet, and REST APIs. Never perform a global `javax.` to `jakarta.` replacement. Preserve Java SE and third-party namespaces including `javax.sql`, `javax.naming`, `javax.crypto`, and JCache's `javax.cache` unless a specific dependency migration proves otherwise.
 
 ## Unused Spring dependencies
 

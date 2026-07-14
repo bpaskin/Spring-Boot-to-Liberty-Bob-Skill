@@ -107,8 +107,10 @@ dependencies {
     // e.g.: runtimeOnly 'com.ibm.db2:jcc:11.5.9.0'
 
     // Test
-    testImplementation 'org.microshed:microshed-testing-liberty:0.9.2'
-    testImplementation 'org.hibernate.validator:hibernate-validator:9.0.1.Final'
+    // Pin a Jakarta-compatible MicroShed release verified by the testing module.
+    testImplementation 'org.microshed:microshed-testing-liberty:{MICROSHED_VERSION}'
+    // Optional: add Hibernate Validator only for validation executed outside Liberty.
+    // testImplementation 'org.hibernate.validator:hibernate-validator:9.0.1.Final'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.12.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -126,8 +128,10 @@ dependencies {
     // Non-Spring runtime dependencies carried forward from the original build file.
     // e.g.: runtimeOnly("com.ibm.db2:jcc:11.5.9.0")
 
-    testImplementation("io.openliberty.tools:microshed-testing-liberty:0.9.2")
-    testImplementation("org.hibernate.validator:hibernate-validator:9.0.1.Final")
+    // Pin a Jakarta-compatible MicroShed release verified by the testing module.
+    testImplementation("org.microshed:microshed-testing-liberty:{MICROSHED_VERSION}")
+    // Optional: add Hibernate Validator only for validation executed outside Liberty.
+    // testImplementation("org.hibernate.validator:hibernate-validator:9.0.1.Final")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -157,13 +161,7 @@ Scan the original `build.gradle` / `build.gradle.kts` for dependencies whose gro
 
 > **Do NOT use `io.openliberty:openliberty-kernel`**. Always use `io.openliberty:openliberty-runtime` when a Liberty runtime artifact must be referenced. The Liberty server installation is managed by the Liberty Gradle plugin via `server.xml` — do not add it as a dependency.
 >
-> **Resolve the latest Open Liberty version** by fetching the IBM DHE release index and parsing the highest version directory:
-> ```bash
-> curl -s https://public.dhe.ibm.com/ibmdl/export/pub/software/openliberty/runtime/release/ \
->   | grep -oP '(?<=href=")[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(?=/)' \
->   | sort -V | tail -1
-> ```
-> Use the version returned as the `runtimeVersion` property in the Liberty Gradle plugin configuration.
+> **Pin the Open Liberty runtime version.** Reuse the project's documented platform version when it supports Jakarta EE 11, or resolve a current supported release from official Open Liberty release metadata. Store the selected value in one Gradle property, use it consistently, and verify it with `libertyInstallFeature`. Do not scrape an HTML directory listing or silently select a moving "latest" version during migration.
 
 ## Jandex Configuration
 

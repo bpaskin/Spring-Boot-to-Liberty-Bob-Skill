@@ -1,14 +1,27 @@
 # Spring Boot to Open Liberty Dependency Map
 
+## Contents
+
+- [Core](#core)
+- [Data and persistence](#data--persistence)
+- [Third-party library placement](#third-party-library-placement)
+- [Messaging](#messaging)
+- [Templating](#templating)
+- [Scheduling, DI, and configuration](#scheduling--di--config)
+- [Cloud and observability](#cloud--observability)
+- [Testing](#testing)
+- [Build plugins](#build-plugin)
+- [Jakarta EE API coordinates](#jakarta-ee-11-api-coordinates)
+
 ## Core
 
 | Spring Boot | Open Liberty / Jakarta EE 11 |
 |---|---|
 | `spring-boot-starter-web` | `jakarta.platform:jakarta.jakartaee-api:11.0.0` (provided) + `restfulWS-4.0` feature |
-| `spring-boot-starter-webflux` | `quarkus-rest` with reactive — Liberty uses Jakarta REST 4.0 with `concurrent-3.0` feature for async |
+| `spring-boot-starter-webflux` | No mechanical equivalent. Preserve behavior requirements, then redesign with Jakarta REST asynchronous APIs plus `concurrent-3.1`, or keep a supported reactive library. Flag Reactor-specific pipelines for manual migration. |
 | `spring-boot-starter-data-jpa` | `jakarta.platform:jakarta.jakartaee-api:11.0.0` (provided) + `persistence-3.2` feature |
-| `spring-boot-starter-validation` | `jakarta.platform:jakarta.jakartaee-api:11.0.0` (provided) + `beanValidation-3.1` feature |
-| `spring-boot-starter-security` | `jakarta.platform:jakarta.jakartaee-api:11.0.0` + `appSecurity-5.0` feature + `<basicRegistry>` or OIDC |
+| `spring-boot-starter-validation` | `jakarta.platform:jakarta.jakartaee-api:11.0.0` (provided) + `validation-3.1` feature |
+| `spring-boot-starter-security` | `jakarta.platform:jakarta.jakartaee-api:11.0.0` + `appSecurity-6.0` feature + an explicitly designed registry, OIDC, or JWT configuration |
 | `spring-boot-starter-actuator` | `org.eclipse.microprofile:microprofile:7.0` (provided) + `mpHealth-4.0` + `mpMetrics-5.1` features |
 | `spring-boot-starter-cache` | JCache provider dependency (e.g., `com.hazelcast:hazelcast` or `org.ehcache:ehcache`) + `<cachingProvider>` in `server.xml` — **no Liberty `jcache` feature needed** |
 | `spring-boot-starter-ws` / `javax.xml.bind:jaxb-api` / `jakarta.xml.bind:jakarta.xml.bind-api` | `jakarta.xml.bind:jakarta.xml.bind-api:4.0.5` (provided) + `xmlBinding-4.0` feature |
@@ -187,7 +200,7 @@ For any other third-party library that Liberty must load directly (e.g. a custom
 |---|---|
 | `spring-boot-starter-amqp` | `com.rabbitmq:amqp-client` + MicroProfile Reactive Messaging (`mpReactiveMessaging-3.0` feature) |
 | `spring-kafka` | `org.apache.kafka:kafka-clients` + `mpReactiveMessaging-3.0` + Kafka connector |
-| `spring-boot-starter-jms` | `messaging-3.0` Liberty feature + configure `<connectionFactory>` in `server.xml` |
+| `spring-boot-starter-jms` | `messaging-3.1` Liberty feature + configure `<connectionFactory>` in `server.xml` |
 
 ## Templating
 
@@ -203,14 +216,14 @@ For any other third-party library that Liberty must load directly (e.g. a custom
 |---|---|
 | `spring-boot-starter` (DI) | CDI 4.1 included in `jakartaee-11.0` feature |
 | `spring-boot-configuration-processor` | MicroProfile Config included in `microProfile-7.0` feature |
-| `spring-boot-starter-quartz` | `org.quartz-scheduler:quartz` (compile) or EJB `@Schedule` via `ejbLite-4.0` feature |
+| `spring-boot-starter-quartz` | Preserve Quartz when jobs require its semantics, or migrate simple schedules to Jakarta Enterprise Beans `@Schedule` via `enterpriseBeansLite-4.0` |
 
 ## Cloud / Observability
 
 | Spring Boot | Open Liberty |
 |---|---|
 | `micrometer-registry-prometheus` | `mpMetrics-5.1` Liberty feature (Prometheus-compatible `/metrics` endpoint) |
-| `spring-boot-starter-logging` | Liberty's built-in JBoss Logging; configure via `<logging>` in `server.xml` |
+| `spring-boot-starter-logging` | Liberty logging and Java Util Logging; preserve an application logging facade only when required and configure Liberty `<logging>` explicitly |
 | `opentelemetry` | `mpTelemetry-2.0` Liberty feature + `io.opentelemetry:opentelemetry-api` |
 | `spring-cloud-starter-config` | MicroProfile Config `mpConfig-3.1` + custom `ConfigSource` implementations |
 

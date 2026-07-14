@@ -7,7 +7,7 @@ Migrate templates, static assets, and view-related code from Spring MVC + Thymel
 - [ ] Detect the view layer scenario (see **Detection** below) — this determines the entire path through this module
 - [ ] Apply the path for the detected scenario — only one path executes
 - [ ] Move static resources from `static/` to `src/main/webapp/` (WAR convention)
-- [ ] Remove Spring CSRF tokens from HTML and JavaScript (Liberty uses its own CSRF support)
+- [ ] Replace Spring CSRF integration with equivalent protection for the chosen target, verify it, and only then remove Spring-specific tokens
 - [ ] Update controller/resource classes to use the chosen technology
 - [ ] Compile: `./mvnw clean compile -DskipTests` (Maven) or `./gradlew clean compileJava -x test` (Gradle)
 
@@ -74,7 +74,7 @@ When Spring MVC `@Controller` classes are detected, present the following to the
 > <feature>jsonb-3.0</feature>
 > <feature>jsonp-2.1</feature>
 > <feature>cdi-4.1</feature>
-> <feature>beanValidation-3.1</feature>
+> <feature>validation-3.1</feature>
 > <feature>pages-4.0</feature>  <!-- if using JSP/Facelets as the view -->
 > ```
 >
@@ -129,7 +129,7 @@ When Spring MVC `@Controller` classes are detected, present the following to the
 > ```
 > ```xml
 > <!-- server.xml features needed -->
-> <feature>servlet-6.0</feature>   <!-- or cdi-4.1 which pulls servlet in -->
+> <feature>servlet-6.1</feature>
 > <feature>cdi-4.1</feature>
 > ```
 >
@@ -180,7 +180,7 @@ Add features to `server.xml`:
     <feature>jsonb-3.0</feature>
     <feature>jsonp-2.1</feature>
     <feature>cdi-4.1</feature>
-    <feature>beanValidation-3.1</feature>
+    <feature>validation-3.1</feature>
     <feature>pages-4.0</feature>
 </featureManager>
 ```
@@ -375,7 +375,7 @@ Add Thymeleaf core to `pom.xml` (no Spring integration — `thymeleaf-spring6` i
 Add features to `server.xml`:
 ```xml
 <featureManager>
-    <feature>servlet-6.0</feature>
+    <feature>servlet-6.1</feature>
     <feature>cdi-4.1</feature>
 </featureManager>
 ```
@@ -513,12 +513,12 @@ The following Thymeleaf features depend on Spring and **must be removed or repla
 
 | Spring-Thymeleaf feature | What to do |
 |---|---|
-| `th:action="@{...}"` with Spring CSRF | Replace with plain `<form action="...">` — remove the hidden CSRF input entirely |
+| `th:action="@{...}"` with Spring CSRF | Replace the Spring expression and render the verified CSRF token required by the selected target technology |
 | `sec:authorize="..."` (Spring Security dialect) | Remove — implement access control at the Servlet level or in CDI beans |
 | `#mvc.url(...)` expression | Replace with hard-coded or `contextPath`-relative URLs |
 | `#authentication` expression | Remove — use a session attribute or CDI `@SessionScoped` bean instead |
 | `th:errors` / `th:object` bound to Spring form objects | Replace with manual `ctx.setVariable(...)` + EL `${fieldError}` pattern |
-| Spring's `@{...}` link URL expressions | These work without Spring; only the CSRF token injection inside them needs removing |
+| Spring's `@{...}` link URL expressions | Verify them with the Spring-free Thymeleaf engine; replace Spring-bound URL helpers and preserve the target CSRF integration |
 
 > **Note:** Standard Thymeleaf expressions (`${...}`, `th:text`, `th:each`, `th:if`, `th:unless`, `th:fragment`, `th:replace`, `th:include`, layout dialect) work without Spring — no changes needed.
 
@@ -650,9 +650,18 @@ src/main/webapp/js/app.js
 
 Static files placed in `src/main/webapp/` are served at the WAR's context root automatically.
 
-## CSRF Token Removal
+## CSRF Protection Migration
 
-Spring Security injects `_csrf` tokens into Thymeleaf templates. Remove these — they have no Jakarta EE equivalent in the same form:
+Spring Security injects `_csrf` tokens into Thymeleaf templates. Treat their presence as evidence that the application expects CSRF protection. Do not remove Spring Security or its tokens until equivalent protection is configured and tested for every state-changing browser flow.
+
+Use the target-specific approach:
+
+- **Jakarta MVC + Krazo**: use Krazo's Jakarta MVC CSRF support (`@CsrfProtected` or implicit protection) and render the replacement token/header defined by the MVC API.
+- **Jakarta Faces**: preserve the Faces view-state mechanism and verify POST requests reject missing or invalid view state. Review any non-Faces endpoints separately.
+- **Preserved Thymeleaf + Servlet**: configure and test an explicit synchronizer-token or equivalent container/application filter before removing Spring's implementation.
+- **Stateless API**: only omit browser CSRF tokens when the API does not use ambient browser credentials such as cookies. JWT bearer authentication is not, by itself, proof that every endpoint is stateless.
+
+After the replacement passes negative tests, remove the obsolete Spring-specific markup:
 
 ```html
 <!-- DELETE from HTML: -->
@@ -668,7 +677,7 @@ const header = document.querySelector('meta[name="_csrf_header"]').content;
 headers[header] = token;
 ```
 
-If the app needs CSRF protection on Liberty, enable the `appSecurity-6.0` feature and configure `<csrfProtection>` in `server.xml`, or use the MicroProfile JWT (`mpJwt-2.1`) feature for stateless API security.
+Add regression tests that submit a state-changing request without a token and with an invalid token; both requests must be rejected before the migration advances.
 
 ## REST-only (`@RestController` → JAX-RS + JSON-B)
 

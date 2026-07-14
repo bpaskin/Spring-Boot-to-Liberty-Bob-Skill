@@ -1,5 +1,17 @@
 # Spring Boot to Jakarta EE 11 Annotation Map
 
+## Contents
+
+- [Dependency injection](#dependency-injection-spring--cdi-41)
+- [REST and web](#rest--web-spring-mvc--jakarta-rest--jax-rs-40)
+- [Data and persistence](#data--jpa-spring-data--jakarta-jpa-32)
+- [Scheduling](#scheduling-spring--jakarta-ee-or-retained-scheduler)
+- [Security](#security-spring-security--microprofile-jwt--jakarta-security)
+- [Caching](#cache-spring-cache--jcache-provider-or-retained-library)
+- [Configuration](#configuration-properties-spring--microprofile-config)
+- [Lifecycle](#application-lifecycle)
+- [Testing](#testing)
+
 ## Dependency Injection (Spring → CDI 4.1)
 
 | Spring | Jakarta EE 11 / CDI 4.1 | Notes |
@@ -14,7 +26,7 @@
 | `@Configuration` | `@ApplicationScoped` | CDI producer class |
 | `@Bean` | `@Produces` (`jakarta.enterprise.inject.Produces`) | Method annotated with `@Produces` in a CDI bean |
 | `@Primary` | `@Default` or `@Alternative` + `@Priority` | CDI uses `@Alternative` + `@Priority(1)` to override |
-| `@Conditional*` | `@IfBuildProfile` / `@LookupIfProperty` (MicroProfile) | CDI extension or MicroProfile extensions |
+| `@Conditional*` | No portable one-to-one mapping | Model the condition with MicroProfile Config plus a CDI producer/extension, or leave a documented TODO when lifecycle semantics cannot be preserved |
 | `@Scope("singleton")` | `@Singleton` (`jakarta.inject.Singleton`) | Eager singleton, no proxy |
 | `@Scope("prototype")` | `@Dependent` (`jakarta.enterprise.context.Dependent`) | New instance per injection point |
 | `@Scope("request")` | `@RequestScoped` (`jakarta.enterprise.context.RequestScoped`) | Per-HTTP-request lifecycle |
@@ -26,7 +38,7 @@
 
 **CDI notes:**
 - CDI beans are discovered by default in a bean archive (WAR with `beans.xml` or CDI 4.0+ annotated discovery).
-- Constructor injection works without `@Inject` if there is only one constructor and all parameters are injectable.
+- Constructor injection requires `@Inject` in portable CDI. Do not rely on framework-specific implicit constructor injection.
 - `@Inject` on a field performs field injection. Constructor injection is preferred for testability.
 - **`DataSource` cannot be injected with `@Inject`** — Liberty's `<dataSource>` is JNDI-bound, not a CDI bean. Use `@Resource(lookup = "jdbc/myapp")` (`jakarta.annotation.Resource`) matching the `jndiName` in `server.xml`.
 
@@ -84,13 +96,13 @@
 private String firstName;
 ```
 
-## Scheduling (Spring → MicroProfile Scheduler)
+## Scheduling (Spring → Jakarta EE or retained scheduler)
 
-| Spring | MicroProfile Scheduler (`mpScheduler`) | Notes |
+| Spring | Jakarta EE / library option | Notes |
 |---|---|---|
-| `@Scheduled(cron="...")` | `@Scheduled(cron="...")` (`org.eclipse.microprofile.reactive.messaging` OR use Jakarta EE Timer) | Requires `mpScheduler` or EJB `@Schedule` |
-| `@Scheduled(fixedRate=1000)` | `@Schedule(second="*/1", ...)` (EJB) or MicroProfile | |
-| `@EnableScheduling` | Not needed | Enable via `mpScheduler` feature or EJB |
+| `@Scheduled(cron="...")` | Jakarta Enterprise Beans `@Schedule`, or retained Quartz | Verify cron semantics; Spring and EJB expressions are not identical |
+| `@Scheduled(fixedRate=1000)` | `ManagedScheduledExecutorService.scheduleAtFixedRate(...)` | Use `concurrent-3.1`; define lifecycle and overlap behavior explicitly |
+| `@EnableScheduling` | No direct equivalent | Enable the selected scheduler through its Liberty feature or application configuration |
 
 For simpler scheduling, use Jakarta EJB `@Singleton` + `@Schedule`:
 
@@ -107,13 +119,13 @@ public class ScheduledTask {
 }
 ```
 
-Add `ejbLite-4.0` or `ejb-4.0` feature to `server.xml`.
+Add `enterpriseBeansLite-4.0` or `enterpriseBeans-4.0` to `server.xml` when using EJB timers.
 
 ## Security (Spring Security → MicroProfile JWT / Jakarta Security)
 
 | Spring | Jakarta EE 11 / MicroProfile | Notes |
 |---|---|---|
-| `@Secured("ROLE_ADMIN")` | `@RolesAllowed("ADMIN")` (`jakarta.annotation.security.RolesAllowed`) | Enable `appSecurity-5.0` feature |
+| `@Secured("ROLE_ADMIN")` | `@RolesAllowed("ADMIN")` (`jakarta.annotation.security.RolesAllowed`) | Enable `appSecurity-6.0` and design an authentication mechanism |
 | `@PreAuthorize("hasRole('ADMIN')")` | `@RolesAllowed("ADMIN")` | |
 | `@EnableWebSecurity` | Not needed | Configure in `server.xml` |
 | `@AuthenticationPrincipal` | `@Context SecurityContext` (JAX-RS) or `@Inject JsonWebToken` (MicroProfile JWT) | |
@@ -129,11 +141,11 @@ Add `ejbLite-4.0` or `ejb-4.0` feature to `server.xml`.
 public class AdminResource { ... }
 ```
 
-## Cache (Spring Cache → MicroProfile LRA / CDI)
+## Cache (Spring Cache → JCache provider or retained library)
 
 | Spring | Jakarta EE 11 / MicroProfile | Notes |
 |---|---|---|
-| `@Cacheable("name")` | JCache (`@CacheResult(cacheName="name")`) | `javax.cache` namespace — not migrated to `jakarta` yet; API is part of `jakartaee-api` BOM |
+| `@Cacheable("name")` | JCache (`@CacheResult(cacheName="name")`) | `javax.cache` namespace — add the JCache API and a compatible provider explicitly; it is not part of Jakarta EE 11 |
 | `@CacheEvict("name")` | `@CacheRemove(cacheName="name")` | |
 | `@EnableCaching` | Not needed | Configure `<cachingProvider>` in `server.xml`; no Liberty `jcache` feature required |
 
@@ -141,7 +153,7 @@ public class AdminResource { ... }
 
 | Spring | MicroProfile Config 3.1 | Notes |
 |---|---|---|
-| `@ConfigurationProperties(prefix="app")` | `@ConfigProperties(prefix="app")` (`org.eclipse.microprofile.config.inject.ConfigProperties`) | Interface-based only |
+| `@ConfigurationProperties(prefix="app")` | `@ConfigProperties(prefix="app")` (`org.eclipse.microprofile.config.inject.ConfigProperties`) | Map to a property class with a public zero-argument constructor; verify defaults, conversion, nesting, and validation rather than assuming Spring binding semantics |
 | `@Value("${prop}")` | `@ConfigProperty(name = "prop")` | Field injection in CDI bean |
 | `@EnableConfigurationProperties` | Not needed | Auto-discovered |
 | `@Validated` on config class | `@Valid` | Requires Bean Validation |

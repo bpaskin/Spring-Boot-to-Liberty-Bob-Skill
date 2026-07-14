@@ -17,6 +17,7 @@ If this fails, **skip this module entirely** — inform the user that git manage
 ### Pre-migration (before executing modules)
 
 - [ ] Verify the project is a git repository
+- [ ] Inspect the current branch, default branch, remotes, and working-tree status
 - [ ] Ensure agent session files are excluded from version control
 - [ ] Determine the next run number from existing branches
 - [ ] Propose branch name to the user and wait for confirmation
@@ -56,6 +57,10 @@ This prevents session logs from being committed and pushed to the remote reposit
 
 ## Create the migration branch
 
+Before switching branches, run `git status --short` and show any existing changes. Existing work belongs to the user: do not stash, discard, stage, or overwrite it. If the tree is dirty and creating the branch from another base would exclude those changes, stop and ask which state should be used.
+
+Determine the repository's default branch from `origin/HEAD` when available; otherwise use the current branch and tell the user. Do not assume the default branch is `main`.
+
 Determine the next run number from existing branches:
 
 ```bash
@@ -64,13 +69,13 @@ git branch -a --list '*migration/run-*' | sort -t- -k3 -n | tail -1
 
 Propose the branch name to the user:
 
-> I'll create branch `migration/run-XX` from `main`. OK, or do you prefer a different name?
+> I'll create branch `migration/run-XX` from `<detected-base-branch>`. The working tree is `<clean/dirty summary>`. OK, or do you prefer a different base or branch name?
 
 Wait for the user to confirm or provide a custom name. Then create the branch:
 
 ```bash
-git checkout main
-git checkout -b <confirmed-branch-name>
+git switch <confirmed-base-branch>
+git switch -c <confirmed-branch-name>
 ```
 
 Where `XX` is the next sequential number (zero-padded to two digits). If no prior branches exist, start with `migration/run-01`.
@@ -122,4 +127,4 @@ gh pr create --draft \
   --body "$(cat migration-report.md)"
 ```
 
-The draft PR is a permanent record — never merge it. `main` always keeps the original Spring Boot code. Use labels to categorize runs (e.g., `strategy:jakartaee`, `strategy:microprofile`).
+The draft PR is a review record and must not be merged automatically. The user decides whether and when a verified migration should be merged. Use labels that reflect the chosen scope, such as `scope:complete` or `scope:staged`.

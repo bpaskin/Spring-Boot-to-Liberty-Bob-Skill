@@ -1,5 +1,20 @@
 # Spring Boot to Open Liberty Configuration Map
 
+## Contents
+
+- [Server](#server)
+- [Datasource](#datasource)
+- [Persistence](#jpa--hibernate)
+- [Logging](#logging)
+- [Profiles](#profiles)
+- [CORS](#cors)
+- [Cache](#cache)
+- [Security](#security)
+- [Health](#health-actuator--microprofile-health)
+- [Static resources](#static-resources)
+- [Templating](#templating)
+- [MicroProfile Config profiles](#microprofile-config-profiles)
+
 ## Server
 
 | Spring Boot | Open Liberty (`server.xml`) |
@@ -133,7 +148,7 @@ Full example:
 | `application-{profile}.properties` | Liberty server variables or separate `server.xml` includes |
 | `spring.profiles.active=dev` | `<include location="server-dev.xml"/>` or env var `WLP_SERVER_CONFIG_DIR` |
 | `SPRING_PROFILES_ACTIVE=prod` (env var) | `WLP_INSTALL_DIR`, Liberty config dropins |
-| `@Profile("dev")` | CDI `@IfBuildProfile("dev")` (MicroProfile extension) or Liberty config variables |
+| `@Profile("dev")` | No portable one-to-one mapping; use MicroProfile Config with a CDI producer/extension, separate deployment configuration, or document a staged-migration TODO |
 | `application-test.properties` | Test-scope MicroProfile Config file or `microprofile-config-test.properties` |
 
 MicroProfile Config property sources in priority order (highest first):
@@ -201,7 +216,7 @@ mp.jwt.verify.publickey.location=publicKey.pem
 |---|---|
 | `/actuator/health` | `/health` (with `mpHealth-4.0` feature) |
 | `/actuator/metrics` | `/metrics` (with `mpMetrics-5.1` feature) |
-| `/actuator/info` | `/info` (with `mpInfo` feature) |
+| `/actuator/info` | Implement an explicit application endpoint or expose build metadata through a documented operational mechanism; there is no `mpInfo` feature |
 | `management.endpoints.web.exposure.include=*` | All endpoints auto-exposed at default paths |
 
 ```xml

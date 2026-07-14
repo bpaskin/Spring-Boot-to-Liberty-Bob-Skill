@@ -440,7 +440,7 @@ public class StartupObserver {
 
 ## Watch out
 
-- **`jakarta.*` imports**: All `javax.*` imports must become `jakarta.*` in Jakarta EE 10+. Verify every import.
+- **Namespace conversion**: Convert only APIs that moved from Java/Jakarta EE to the `jakarta.*` namespace. Preserve Java SE and third-party packages such as `javax.sql`, `javax.naming`, `javax.crypto`, and `javax.cache`.
 - **`@Transactional`**: Use `jakarta.transaction.Transactional`, NOT `org.springframework.transaction.annotation.Transactional`.
 - **No component scanning**: CDI discovers beans in the same archive via `beans.xml` or by default if the archive is a bean archive (JAR/WAR with CDI 4.0+ implicit discovery). Add `src/main/resources/META-INF/beans.xml` with `bean-discovery-mode="all"` if beans are not discovered.
 - **No Open Session in View**: Liberty/JPA does not keep the persistence context open across the entire HTTP request by default. Lazy-loaded associations must be fetched within a `@Transactional` boundary.
