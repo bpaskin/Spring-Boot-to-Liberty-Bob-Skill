@@ -1,6 +1,6 @@
 # Migrate Spring and Spring Boot applications to Jakarta EE 11 and Liberty
 
-An IBM Bob skill that migrates Spring Boot applications to **Jakarta EE 11 running on Open Liberty**, following a modular, gate-driven approach. Each stage of the migration is gated on what is actually present in the project — modules are skipped if they don't apply.
+An IBM Bob skill that migrates Spring Boot applications to **Jakarta EE 11 on Open Liberty** through a baseline-driven, resumable workflow. Each module is classified as `PASS`, `PARTIAL`, `SKIP`, or `BLOCKED` from project evidence, so complete and staged migrations follow the same safety model.
 
 ## Quick start
 
@@ -34,6 +34,8 @@ The skill first inventories the build, Java APIs, configuration, views, tests, s
 - Complex Spring Security filter chains, OAuth client behavior, method expressions, and session policies require an explicit security design and negative tests.
 - Spring Batch, Spring Integration, Spring Cloud, and custom Spring extensions require project-specific migration plans.
 - Scheduling expressions and concurrency semantics must be verified; Spring, Enterprise Beans timers, Jakarta Concurrency, and Quartz are not interchangeable.
+- `spring.jpa.hibernate.ddl-auto=update` has no portable Jakarta Persistence equivalent. Schema generation defaults to `none`; use a reviewed migration tool for durable environments.
+- Applications without tests can be migrated, but the result cannot claim behavioral parity until representative positive, negative, and security cases exist.
 - Never remove working CSRF protection, authentication, authorization, secrets handling, or transaction boundaries before the replacement is configured and tested.
 
 ---
@@ -83,7 +85,7 @@ Each module runs only if its gate condition is met:
 | **build** | Spring build markers, or mixed Spring/Liberty build state | Detects Maven/Gradle, handles complete and partial migrations idempotently, preserves non-Spring runtime dependencies, and migrates runtime configuration. |
 | **code** | Spring imports, API calls, TODOs, or mixed Spring/Jakarta code | Migrates the confirmed source slice while preserving transaction, security, persistence, scheduling, and configuration semantics. Schema generation defaults to `none`; destructive actions require a named environment, usable backup, exact impact, and explicit approval. |
 | **frontend** | Templates/assets or controller/view-return signals | Loads only the contract-selected Jakarta MVC, Faces, retained Thymeleaf, JSP/static, or REST path. Replaces and negative-tests CSRF protection before removing Spring integration. |
-| **testing** | Any tests/configuration, or no tests that must be reported | Preserves plain JUnit tests, migrates Spring tests where needed, compares counts/results with baseline, and records a coverage risk when no tests exist. |
+| **testing** | Any test source, dependency, or configuration | Preserves plain JUnit tests, migrates Spring tests where needed, and compares counts/results with baseline. When no tests exist, the module is skipped and the ledger records a coverage risk. |
 | **cleanup** | ALWAYS — runs after all other modules | Removes leftover Spring imports; converts only explicitly mapped Jakarta EE APIs from `javax.*` while preserving Java SE and third-party namespaces; removes unused Spring dependencies and stale configuration; creates `beans.xml` when CDI discovery needs it. |
 | **feature-scan** | ALWAYS — runs after cleanup | Derives and verifies a minimal feature set. It pauses only when a feature change exceeds the contract or may alter descriptor/reflection-driven behavior. |
 | **run-local** | ALWAYS — runs after feature-scan | Runs Liberty in a controlled foreground session with a readiness URL, timeout, log evidence, smoke tests, and guaranteed graceful cleanup; a packaged foreground run is available when dev mode is unsuitable. |
@@ -108,11 +110,11 @@ Six ordered checks distinguish migration failures, baseline failures, and unavai
 | # | Check | Pass criteria |
 |---|---|---|
 | 1 | Builds | The detected Maven or Gradle launcher completes a clean package/build with no compilation errors |
-| 2 | No Spring deps | Zero `org.springframework` dependencies remaining in the build file |
+| 2 | Spring dependency scope | Zero Spring dependencies for complete removal; only contract-approved dependencies remain for a staged migration |
 | 3 | Has Liberty | Liberty BOM / plugin and at least one Jakarta EE feature present |
 | 4 | Tests pass | All tests pass using MicroShed or Arquillian |
 | 5 | Starts up | Readiness within the recorded timeout; app responds; logs have no unresolved application errors; owned process stops cleanly |
-| 6 | No leftover templates | No Thymeleaf references remaining (unless intentionally kept) |
+| 6 | View migration scope | No obsolete templates remain; retained Thymeleaf or staged views match the migration contract |
 
 ---
 
@@ -147,7 +149,10 @@ The skill uses canonical mapping references plus conditionally loaded frontend a
 | [`references/config-map.md`](migrate-spring-to-liberty/references/config-map.md) | Build module — `application.properties` property migration covering server, datasource, JPA, logging, profiles, CORS, cache, security, health, and static resources |
 | [`references/jakarta-ee11-liberty-features.md`](migrate-spring-to-liberty/references/jakarta-ee11-liberty-features.md) | Canonical Jakarta EE 11 and MicroProfile feature names, Maven/Gradle coordinates, profile membership, JCache provider guidance, security examples, and typical `<featureManager>` sets |
 | [`references/migration-ledger.md`](migrate-spring-to-liberty/references/migration-ledger.md) | Baseline, consolidated contract, module state, transaction boundaries, and resume protocol |
-| `references/frontend-*.md` | Loaded one at a time for Jakarta MVC, Faces, retained Thymeleaf, or JSP/REST paths |
+| [`references/frontend-jakarta-mvc.md`](migrate-spring-to-liberty/references/frontend-jakarta-mvc.md) | Loaded only when the contract selects Jakarta MVC with Krazo |
+| [`references/frontend-faces.md`](migrate-spring-to-liberty/references/frontend-faces.md) | Loaded only when the contract selects Jakarta Faces |
+| [`references/frontend-thymeleaf.md`](migrate-spring-to-liberty/references/frontend-thymeleaf.md) | Loaded only when core Thymeleaf is intentionally retained |
+| [`references/frontend-jsp-rest.md`](migrate-spring-to-liberty/references/frontend-jsp-rest.md) | Loaded for confirmed JSP/static paths or REST-only applications |
 
 ---
 
@@ -190,6 +195,17 @@ python3 migrate-spring-to-liberty/scripts/validate_skill.py
 ```
 
 The validator checks frontmatter, internal links, canonical Jakarta EE 11 feature declarations, destructive schema examples, known nonportable mappings, security-critical wording, and four gate-classification fixtures. The same checks run in GitHub Actions.
+
+### Evaluation fixtures
+
+| Fixture | Behavior covered |
+|---|---|
+| [`rest-maven`](tests/fixtures/rest-maven) | Maven REST application with plain JUnit tests; frontend skips while testing still runs |
+| [`mvc-jpa-security`](tests/fixtures/mvc-jpa-security) | Spring MVC, Thymeleaf, JPA, Security, CSRF, and Spring integration tests |
+| [`partial-gradle-kotlin`](tests/fixtures/partial-gradle-kotlin) | Mixed Spring/Jakarta Gradle Kotlin project classified as a partial migration |
+| [`no-tests`](tests/fixtures/no-tests) | Spring configuration with no tests; records an explicit coverage risk |
+
+Each fixture includes `expected.json`. The validator derives its build, code, frontend, and testing gates and fails CI when the result changes unexpectedly.
 
 ---
 
