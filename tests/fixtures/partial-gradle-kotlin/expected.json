@@ -4,5 +4,6 @@
   "frontend": "SKIP",
   "testing": "SKIP",
   "coverage_risk": true,
-  "repository_strategy_required": false
+  "repository_strategy_required": false,
+  "rehost_candidate": false
 }

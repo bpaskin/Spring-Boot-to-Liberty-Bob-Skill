@@ -2,6 +2,8 @@
 
 Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); update an existing feature set rather than appending a second one.
 
+If the contract selects retain Spring and rehost, log this module as `SKIP` and stop. The [rehost module](rehost-spring.md) derives the Spring Boot Support and web-container features without interpreting retained Spring imports as Jakarta EE usage.
+
 After all migration modules have compiled cleanly, scan the migrated Java sources and configuration files to derive the exact set of Open Liberty features the application needs. Replace the placeholder `jakartaee-11.0` / `microProfile-7.0` umbrella features with a precise, minimal feature list.
 
 Load [references/jakarta-ee11-liberty-features.md](../references/jakarta-ee11-liberty-features.md) before deriving the list. Treat it as the canonical mapping and verify uncertain feature names against the Open Liberty feature documentation.

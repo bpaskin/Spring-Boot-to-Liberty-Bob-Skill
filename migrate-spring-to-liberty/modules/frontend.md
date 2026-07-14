@@ -2,6 +2,8 @@
 
 Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md).
 
+If the contract selects retain Spring and rehost, log this module as `SKIP` and stop. Preserve Spring MVC, Thymeleaf, templates, static assets, and CSRF integration for parity testing.
+
 Classify the view layer, load exactly one scenario reference, preserve browser behavior, and verify CSRF protection before removing Spring integration.
 
 ## What to do

@@ -2,9 +2,22 @@
 
 Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); preserve baseline test evidence and avoid duplicating test infrastructure on rerun.
 
-Preserve every existing test, migrate Spring-specific test infrastructure, and add only the integration coverage needed to verify behavior on Liberty. Treat an application with no tests as an explicit coverage risk rather than silently declaring the module complete.
+Preserve every existing test and add only the integration coverage needed to verify behavior on Liberty. Treat an application with no tests as an explicit coverage risk rather than silently declaring the module complete.
 
-## What to do
+Apply the contract scope before changing tests:
+
+- **Complete or staged rewrite**: migrate Spring-specific test infrastructure only for the rewritten slice, using the guidance below.
+- **Retain Spring and rehost**: keep `@SpringBootTest`, MockMvc, `TestRestTemplate`, Spring test profiles, and Spring test dependencies unchanged. Run them as the baseline suite, then add only a Liberty-hosted smoke/security test when existing tests do not exercise the deployed artifact. Never replace Spring tests with MicroShed merely because the host changes.
+
+## Rehost checklist
+
+- [ ] Keep the Spring test dependencies, annotations, profiles, and runners unchanged
+- [ ] Run the original test command and compare counts/failures with the baseline
+- [ ] Add a Liberty-hosted smoke/security test only when existing tests do not exercise the deployed artifact
+- [ ] Verify both successful and denied/unauthenticated routes that can change across web containers
+- [ ] Do not claim framework migration coverage; report that Spring was retained
+
+## Rewrite checklist
 
 - [ ] Replace `@SpringBootTest` integration tests with MicroShed Testing (`@MicroShedTest`)
 - [ ] Replace `@MockBean` with Mockito or CDI `@Alternative` for unit tests

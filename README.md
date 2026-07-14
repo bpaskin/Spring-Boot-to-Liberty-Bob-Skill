@@ -1,6 +1,6 @@
-# Migrate Spring and Spring Boot applications to Jakarta EE 11 and Liberty
+# Migrate or rehost Spring Boot applications on Open Liberty
 
-An IBM Bob skill that migrates Spring Boot applications to **Jakarta EE 11 on Open Liberty** through a baseline-driven, resumable workflow. Each module is classified as `PASS`, `PARTIAL`, `SKIP`, or `BLOCKED` from project evidence, so complete and staged migrations follow the same safety model.
+An IBM Bob skill that first decides whether to **retain Spring Boot on Open Liberty** or rewrite it to **Jakarta EE 11**. Its baseline-driven, resumable workflow prevents a hosting-only request from turning into an unnecessary framework rewrite.
 
 ## Quick start
 
@@ -16,6 +16,12 @@ Then open a Bob task in a Spring Boot project and ask:
 Analyze this Spring Boot application for a complete migration to Jakarta EE 11 on Open Liberty. Do not change files until you show the migration inventory and I choose the scope.
 ```
 
+For a hosting-only assessment, ask:
+
+```text
+Analyze whether this Spring Boot application can be rehosted on Open Liberty without rewriting Spring code. Do not change files until you show the inventory and scope choices.
+```
+
 The skill first inventories the build, Java APIs, configuration, views, tests, security, and operational requirements. It then records a read-only baseline and one consolidated migration contract before changing the project.
 
 ## Compatibility
@@ -23,6 +29,7 @@ The skill first inventories the build, Java APIs, configuration, views, tests, s
 | Component | Target |
 |---|---|
 | Jakarta EE | 11 |
+| Spring Boot rehost | 3.x or 4.x with matching `springBoot-3.0` / `springBoot-4.0` Liberty support |
 | Java | 17 minimum; LTS targets 17, 21, or 25 |
 | Open Liberty | A pinned release verified to install every selected feature |
 | MicroProfile | Optional capabilities selected from the application's actual usage |
@@ -61,8 +68,9 @@ The user then chooses a migration scope:
 |---|---|
 | **Complete Spring removal** | Replaces all Spring APIs with Jakarta EE 11 and selected MicroProfile equivalents. Best for long-term maintainability. |
 | **Staged migration** | Migrates a selected slice and documents the remaining Spring dependencies and interoperability risks. |
+| **Retain Spring and rehost** | Preserves Spring code, starters, configuration, and tests while adding Liberty packaging, deployment configuration, and runtime verification. Best when Liberty hosting—not framework removal—is the goal. |
 
-MicroProfile complements Jakarta EE rather than replacing it. The skill detects and adds optional MicroProfile capabilities only when the application needs them.
+For rehosting, the skill verifies Spring Boot 3/4 eligibility and preserves Spring starters. For rewrite scopes, MicroProfile complements Jakarta EE rather than replacing it, and optional capabilities are added only when the application needs them.
 
 ---
 
@@ -83,13 +91,14 @@ Each module runs only if its gate condition is met:
 | Module | Gate | What it does |
 |---|---|---|
 | **jdk** | ALWAYS — stops migration if the JDK is unsupported | Enforces Java 17+ and applies the contract-selected LTS target 17, 21, or 25. |
-| **build** | Spring build markers, or mixed Spring/Liberty build state | Detects Maven/Gradle, handles complete and partial migrations idempotently, preserves non-Spring runtime dependencies, and migrates runtime configuration. |
-| **code** | Spring imports, API calls, TODOs, or mixed Spring/Jakarta code | Migrates the confirmed source slice while preserving transaction, security, persistence, scheduling, and configuration semantics. Spring Data repositories follow the contract-selected Jakarta Data 1.0, CDI + `EntityManager`, or staged path. Schema generation defaults to `none`; destructive actions require a named environment, usable backup, exact impact, and explicit approval. |
-| **frontend** | Templates/assets or controller/view-return signals | Loads only the contract-selected Jakarta MVC, Faces, retained Thymeleaf, JSP/static, or REST path. Replaces and negative-tests CSRF protection before removing Spring integration. |
-| **testing** | Any test source, dependency, or configuration | Preserves plain JUnit tests, migrates Spring tests where needed, and compares counts/results with baseline. When no tests exist, the module is skipped and the ledger records a coverage risk. |
-| **cleanup** | ALWAYS — runs after all other modules | Removes leftover Spring imports; converts only explicitly mapped Jakarta EE APIs from `javax.*` while preserving Java SE and third-party namespaces; removes unused Spring dependencies and stale configuration; creates `beans.xml` when CDI discovery needs it. |
-| **feature-scan** | ALWAYS — runs after cleanup | Derives and verifies a minimal feature set. It pauses only when a feature change exceeds the contract or may alter descriptor/reflection-driven behavior. |
-| **run-local** | ALWAYS — runs after feature-scan | Runs Liberty in a controlled foreground session with a readiness URL, timeout, log evidence, smoke tests, and guaranteed graceful cleanup; a packaged foreground run is available when dev mode is unsuitable. |
+| **rehost-spring** | Contract selects retain Spring; Boot 3/4 and a valid bootstrap are present | Preserves Spring and adds the matching Liberty Spring Boot Support feature, plugin configuration, actual artifact deployment, and scope-aware validation. |
+| **build** | Rewrite scope plus Spring build markers or mixed Spring/Liberty state | Detects Maven/Gradle, handles complete and partial rewrites idempotently, preserves non-Spring runtime dependencies, and migrates runtime configuration. |
+| **code** | Rewrite scope plus Spring APIs, TODOs, or mixed Spring/Jakarta code | Migrates the confirmed source slice while preserving transaction, security, persistence, scheduling, and configuration semantics. Spring Data repositories follow the contract-selected Jakarta Data 1.0, CDI + `EntityManager`, or staged path. |
+| **frontend** | Rewrite scope plus templates/assets or controller/view-return signals | Loads only the contract-selected Jakarta MVC, Faces, retained Thymeleaf, JSP/static, or REST path. Replaces and negative-tests CSRF protection before removing Spring integration. |
+| **testing** | Any test source, dependency, or configuration | Rewrite scopes migrate Spring-specific tests where needed; rehosting preserves the Spring test suite and adds only missing Liberty-hosted coverage. |
+| **cleanup** | ALWAYS for rewrite scopes; SKIP for rehosting | Removes leftover Spring imports only when Spring removal was selected; rehosting preserves them. |
+| **feature-scan** | ALWAYS for rewrite scopes; SKIP for rehosting | Derives the Jakarta EE/MicroProfile feature set for rewrites; the rehost module owns Spring Boot feature selection. |
+| **run-local** | ALWAYS — runs after the applicable rewrite or rehost modules | Runs Liberty in a controlled foreground session with a readiness URL, timeout, log evidence, smoke tests, and guaranteed graceful cleanup; a packaged foreground run is available when dev mode is unsuitable. |
 
 After every module the skill runs a compile check with the project's wrapper when present, or the installed `mvn`/`gradle` command otherwise. It never advances to the next module with a broken build.
 
@@ -111,11 +120,11 @@ Six ordered checks distinguish migration failures, baseline failures, and unavai
 | # | Check | Pass criteria |
 |---|---|---|
 | 1 | Builds | The detected Maven or Gradle launcher completes a clean package/build with no compilation errors |
-| 2 | Spring dependency scope | Zero Spring dependencies for complete removal; only contract-approved dependencies remain for a staged migration |
-| 3 | Has Liberty | Liberty BOM / plugin and at least one Jakarta EE feature present |
-| 4 | Tests pass | All tests pass using MicroShed or Arquillian |
+| 2 | Spring dependency scope | Zero for complete removal, only approved Spring for staged migration, or preserved baseline Spring dependencies for rehosting |
+| 3 | Has Liberty | Rewrite has Jakarta EE features; rehost has the matching Spring Boot Support feature, required web feature, and actual Boot artifact declaration |
+| 4 | Tests pass | Rewrite tests use the selected Jakarta/Liberty path; rehost preserves Spring tests and adds only missing Liberty smoke coverage |
 | 5 | Starts up | Readiness within the recorded timeout; app responds; logs have no unresolved application errors; owned process stops cleanly |
-| 6 | View migration scope | No obsolete templates remain; retained Thymeleaf or staged views match the migration contract |
+| 6 | View scope | Rewrite matches the selected view path; rehost preserves baseline Spring view behavior |
 
 ---
 
@@ -163,6 +172,7 @@ The skill uses canonical mapping references plus conditionally loaded frontend a
 | Module file | Purpose |
 |---|---|
 | [`modules/jdk.md`](migrate-spring-to-liberty/modules/jdk.md) | JDK version check — supports 17, 21, 25 |
+| [`modules/rehost-spring.md`](migrate-spring-to-liberty/modules/rehost-spring.md) | Hosting-only route for Spring Boot 3/4 using Liberty Spring Boot Support without a framework rewrite |
 | [`modules/build.md`](migrate-spring-to-liberty/modules/build.md) | Build system dispatcher + `server.xml` / MicroProfile Config creation |
 | [`modules/build-maven.md`](migrate-spring-to-liberty/modules/build-maven.md) | Maven-specific migration (`pom.xml`, `liberty-maven-plugin`, `jandex-maven-plugin`) |
 | [`modules/build-gradle.md`](migrate-spring-to-liberty/modules/build-gradle.md) | Gradle-specific migration (Groovy DSL and Kotlin DSL, Liberty Gradle plugin, Jandex) |
@@ -196,7 +206,7 @@ Before contributing an update, run:
 python3 migrate-spring-to-liberty/scripts/validate_skill.py
 ```
 
-The validator checks frontmatter, internal links, canonical Jakarta EE 11 feature declarations, destructive schema examples, known nonportable mappings, security-critical wording, and five gate-classification fixtures. The same checks run in GitHub Actions.
+The validator checks frontmatter, internal links, canonical Jakarta EE 11 and Spring Boot feature declarations, destructive schema examples, known nonportable mappings, security-critical wording, and six gate-classification fixtures. The same checks run in GitHub Actions.
 
 ### Evaluation fixtures
 
@@ -207,20 +217,22 @@ The validator checks frontmatter, internal links, canonical Jakarta EE 11 featur
 | [`partial-gradle-kotlin`](tests/fixtures/partial-gradle-kotlin) | Mixed Spring/Jakarta Gradle Kotlin project classified as a partial migration |
 | [`no-tests`](tests/fixtures/no-tests) | Spring configuration with no tests; records an explicit coverage risk |
 | [`spring-data-repository`](tests/fixtures/spring-data-repository) | Detects Spring Data repository interfaces and requires an explicit Jakarta Data, `EntityManager`, or staged strategy |
+| [`rehost-spring-boot`](tests/fixtures/rehost-spring-boot) | Detects an eligible Spring Boot 3 application with an executable bootstrap and preserves its Spring test path |
 
-Each fixture includes `expected.json`. The validator derives its build, code, frontend, and testing gates, plus whether a repository-strategy decision is required, and fails CI when the result changes unexpectedly.
+Each fixture includes `expected.json`. The validator derives its build, code, frontend, and testing gates, whether a repository strategy is required, and whether the application is a rehost candidate.
 
 ---
 
 ## Trigger phrases
 
-The skill activates on: `"spring to liberty"`, `"liberty migration"`, `"migrate to Jakarta EE"`, `"replace spring"`, `"migrate pom.xml"`, `"migrate build.gradle"`, `"Spring MVC"`, `"Spring Data JPA"`, `"@SpringBootApplication"`, `"WebSphere Liberty"`, `"Open Liberty"`
+The skill activates on: `"spring to liberty"`, `"rehost Spring Boot"`, `"retain Spring on Liberty"`, `"liberty migration"`, `"migrate to Jakarta EE"`, `"replace spring"`, `"migrate pom.xml"`, `"migrate build.gradle"`, `"Spring MVC"`, `"Spring Data JPA"`, `"@SpringBootApplication"`, `"WebSphere Liberty"`, `"Open Liberty"`
 
 ---
 
 ## Learn more
 
 - [Open Liberty documentation](https://openliberty.io/docs/)
+- [Deploy Spring Boot applications to Open Liberty](https://openliberty.io/docs/latest/deploy-spring-boot.html)
 - [Jakarta EE 11 specification](https://jakarta.ee/specifications/)
 - [MicroProfile 7 specification](https://microprofile.io/)
 - [IBM Semeru Runtimes (JDK)](https://developer.ibm.com/languages/java/semeru-runtimes/)

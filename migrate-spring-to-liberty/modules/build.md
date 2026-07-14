@@ -2,6 +2,8 @@
 
 Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); on rerun, update existing build/configuration entries instead of duplicating them.
 
+If the contract selects retain Spring and rehost, log this module as `SKIP` and execute [rehost-spring.md](rehost-spring.md) instead. Do not apply the rewrite build templates.
+
 Migrate the build descriptor and configuration files from Spring Boot to Open Liberty with Jakarta EE 11.
 
 ## Instructions

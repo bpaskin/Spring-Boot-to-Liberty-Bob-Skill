@@ -1,11 +1,11 @@
 ---
 name: migrate-spring-to-liberty
-description: Migrate Spring Boot applications to Jakarta EE 11 on Open Liberty with optional MicroProfile capabilities using a modular, gate-driven workflow. Use when the user asks to migrate, convert, or port a Spring Boot application to Open Liberty or Jakarta EE; remove Spring; migrate a Maven or Gradle build; convert Spring MVC, Spring Data JPA, Spring Security, scheduling, configuration, tests, or @SpringBootApplication; or prepare an application for WebSphere Liberty or Open Liberty.
+description: Migrate Spring Boot applications to Jakarta EE 11 or rehost Spring Boot 3/4 applications unchanged on Open Liberty using a modular, gate-driven workflow. Use when the user asks to migrate, convert, rehost, deploy, or port a Spring Boot application to Open Liberty or Jakarta EE; retain or remove Spring; migrate a Maven or Gradle build; convert Spring MVC, Spring Data JPA, Spring Security, scheduling, configuration, tests, or @SpringBootApplication; or prepare an application for WebSphere Liberty or Open Liberty.
 ---
 
-# Spring Boot to Jakarta EE 11 + Open Liberty Migration
+# Spring Boot Migration or Rehosting on Open Liberty
 
-Modular, gate-driven migration of Spring Boot applications to Jakarta EE 11 running on Open Liberty.
+Modular, gate-driven selection between retaining Spring Boot on Open Liberty and rewriting to Jakarta EE 11.
 
 ## Critical Rules
 
@@ -19,6 +19,7 @@ Modular, gate-driven migration of Spring Boot applications to Jakarta EE 11 runn
 - **No silent changes.** Every file modification must be intentional and traceable. If a check fails after a phase, diagnose and fix — don't skip the check or delete the failing code.
 - **Default to non-destructive data handling.** Preserve the existing schema and data. Never select `drop`, `drop-and-create`, or another destructive database action without naming the affected environment, confirming a usable backup, showing the exact consequence, and receiving explicit approval.
 - **Preserve user work.** Capture the pre-existing worktree state before editing. Never roll back, stage, or overwrite changes that were not created by this migration.
+- **Respect the selected architecture path.** When the contract selects retain Spring and rehost, preserve Spring code, dependencies, configuration, and tests; never run rewrite, cleanup, or Jakarta feature-inference instructions.
 
 ## Reference Files
 
@@ -40,7 +41,7 @@ Load the relevant reference file when working on a module:
 
 ## Step 1: Analyze & Choose Scope
 
-Scan the application to understand what needs to migrate:
+Scan the application to understand whether it should be rewritten or rehosted:
 
 - **Build system**: Read the build file (`pom.xml` for Maven, `build.gradle` or `build.gradle.kts` for Gradle) — Spring Boot version, starters, plugins
 - **Build launcher**: Record whether `mvnw`/`gradlew` exists; do not assume a wrapper is present
@@ -53,8 +54,9 @@ Present a summary table with area, findings, and complexity. Then ask the user t
 
 - **Complete Spring removal**: Replace all Spring APIs with Jakarta EE 11 and selected MicroProfile equivalents. Prefer this for long-term maintainability.
 - **Staged migration**: Migrate a user-selected slice while documenting remaining Spring dependencies and interoperability risks. Do not claim the application is Spring-free.
+- **Retain Spring and rehost on Liberty**: Keep Spring Boot application code, starters, configuration, and tests; add only Liberty packaging, the matching Spring Boot Support feature, deployment configuration, and runtime validation. Prefer this when the goal is Liberty hosting rather than Spring removal.
 
-MicroProfile complements Jakarta EE; it is not a competing migration approach. After scope selection, inventory which optional capabilities are actually needed, such as Config, Health, Metrics, Fault Tolerance, JWT, OpenAPI, Rest Client, Telemetry, or Reactive Messaging. Add only those capabilities whose APIs or configuration are present.
+For rehosting, first verify that the application is Spring Boot 3.x or 4.x and has a valid executable bootstrap. Preserve Spring starters instead of replacing them with Jakarta EE or MicroProfile features. For rewrite scopes, MicroProfile complements Jakarta EE; inventory optional capabilities only after scope selection and add only those whose APIs or configuration are present.
 
 **Stop here and wait for the user's response before continuing.** Keep this first decision limited to scope.
 
@@ -70,7 +72,7 @@ After scope selection, perform a read-only baseline before changing files:
 
 Then present one **Migration Contract** containing only applicable decisions and ask for one response:
 
-- migration scope and the exact staged slice, if any
+- scope: complete Spring removal, an exact staged slice, or retain Spring and rehost on Liberty
 - target JDK (17, 21, or 25)
 - exact branch name and base branch, or an explicit choice to stay on the current branch
 - view technology when server-rendered Spring MVC or Thymeleaf is present
@@ -79,6 +81,7 @@ Then present one **Migration Contract** containing only applicable decisions and
 - authentication source and authorization expectations when Spring Security is present
 - test approach and whether a compatible container runtime is available
 - known external-service constraints and which runtime checks may be blocked
+- for rehosting only: Spring Boot stream, JAR/WAR and full/thin artifact choice, actual artifact name, context root/ports, and whether Liberty or Spring properties own each runtime setting
 
 Do not repeat a contract question later. Ask a new question only when newly discovered evidence changes the migration design or would authorize a destructive/external action. After confirmation, create `migration-report.md` as the durable contract, baseline, and module ledger. If the Git workflow is selected, follow [modules/git.md](modules/git.md) using the already-confirmed branch details.
 
@@ -98,18 +101,27 @@ Do not repeat a contract question later. Ask a new question only when newly disc
 | Module                          | Gate Check                                                                                                                | Gate Result                                                                              |
 |---------------------------------|---------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
 | [jdk](modules/jdk.md)           | Jakarta EE 11 requires Java 17+; this skill targets supported LTS JDKs 17, 21, and 25 | **ALWAYS** -- stop migration if unsupported |
-| [build](modules/build.md)       | Spring Boot parent, plugin, BOM, starters, or Spring dependencies in a Maven/Gradle build; existing Liberty configuration also counts for partial runs | **PASS** for Spring build markers; **PARTIAL** when Spring and Liberty/Jakarta build artifacts coexist; **SKIP** only when no build migration is needed |
-| [code](modules/code.md)         | Spring imports, annotations, API calls, configuration, repositories, bootstrap, security, scheduling, or known migration TODOs | **PASS** for Spring usage; **PARTIAL** when Spring and Jakarta code coexist or migration TODOs remain; **SKIP** only after semantic inspection finds no code work |
-| [frontend](modules/frontend.md) | Templates/static assets, `@Controller`, `Model`/`ModelAndView`, view-name returns, MVC configuration, or retained Thymeleaf | **PASS** for a Spring/view layer; **PARTIAL** for mixed/previously migrated views; **SKIP** for a verified API-only application |
+| [rehost-spring](modules/rehost-spring.md) | Contract selects retain Spring and rehost; application is Spring Boot 3.x/4.x with a valid bootstrap | **PASS** for an unconfigured eligible app; **PARTIAL** when Liberty rehost configuration exists; **SKIP** for rewrite scopes; **BLOCKED** for an unsupported stream or missing bootstrap |
+| [build](modules/build.md)       | Rewrite scope plus Spring Boot build markers or existing Liberty/Jakarta build artifacts | **PASS** for Spring build markers; **PARTIAL** when Spring and Liberty/Jakarta artifacts coexist; **SKIP** for rehosting or when no rewrite build work is needed |
+| [code](modules/code.md)         | Rewrite scope plus Spring APIs, configuration, repositories, bootstrap, security, scheduling, or migration TODOs | **PASS** for Spring usage; **PARTIAL** when Spring and Jakarta code coexist or TODOs remain; **SKIP** for rehosting or after semantic inspection finds no rewrite work |
+| [frontend](modules/frontend.md) | Rewrite scope plus templates/static assets, controllers, model/view returns, or MVC configuration | **PASS** for a Spring/view layer; **PARTIAL** for mixed views; **SKIP** for rehosting or a verified API-only application |
 | [testing](modules/testing.md)   | Any test source, test dependency, test configuration, or absence of tests that must be recorded as a coverage gap | **PASS** when tests exist; **PARTIAL** for mixed Spring/plain/Jakarta tests; **SKIP** only when no tests exist, after recording the coverage risk |
-| [cleanup](modules/cleanup.md)   | Leftover Spring artifacts after all other modules                                                                          | **ALWAYS** — runs after all other modules                                                |
-| [feature-scan](modules/feature-scan.md) | Always — scan migrated sources and config to build a minimal `<featureManager>` list and update `server.xml`      | **ALWAYS** — runs after cleanup, before run-local                                        |
-| [run-local](modules/run-local.md) | Always — start Liberty locally, read logs, and fix runtime errors before finalising                                     | **ALWAYS** — runs after feature-scan                                                     |
+| [cleanup](modules/cleanup.md)   | Rewrite scopes after the other rewrite modules | **ALWAYS** for rewrite scopes; **SKIP** for rehosting because Spring must remain |
+| [feature-scan](modules/feature-scan.md) | Rewrite scopes — derive a minimal Jakarta EE/MicroProfile feature set | **ALWAYS** for rewrite scopes; **SKIP** for rehosting because `rehost-spring` owns its feature set |
+| [run-local](modules/run-local.md) | Start the migrated or rehosted application on Liberty and verify behavior | **ALWAYS** — runs after the applicable build/rehost and testing modules |
 
 ### Execution Protocol
 
+Choose exactly one route from the confirmed contract:
+
 ```
-FOR module IN [jdk, build, code, frontend, testing, cleanup, feature-scan, run-local]:
+IF scope == RETAIN_SPRING_REHOST:
+  MODULES = [jdk, rehost-spring, testing, run-local]
+  LOG build, code, frontend, cleanup, feature-scan as SKIP — Spring rewrite not selected
+ELSE:
+  MODULES = [jdk, build, code, frontend, testing, cleanup, feature-scan, run-local]
+
+FOR module IN MODULES:
 
   1. RESUME — read the contract and ledger; inspect current files instead of trusting stale status
   2. EVALUATE — inspect the project for the gate condition
@@ -135,24 +147,25 @@ If a module cannot be repaired, reverse only edits made by that module when they
 To run a single module outside the full migration flow, read its file directly:
 
 - "Read `modules/build.md` and execute it"
+- "Retain Spring and run only the rehost path"
 - "Run only the frontend module"
 - "Re-run the cleanup module"
 - "Re-run the feature-scan module"
 
 The module will use the current project state and chosen migration scope. If no scope has been chosen, the module must ask before changing files.
 
-## Step 4: Verify the Migration
+## Step 4: Verify the Migration or Rehost
 
 Run each check in order. Distinguish `FAIL` (a migration regression) from `BLOCKED` (an unavailable external dependency) and from a documented baseline failure. Never report `BLOCKED` as `PASS`.
 
 | # | Check | Command (Maven / Gradle) | Pass criteria |
 |---|-------|---------|---------------|
 | 1 | **Builds** | Maven: `clean package -DskipTests`; Gradle: `clean build -x test` (using the detected launcher) | Exit code 0, no compilation errors |
-| 2 | **No Spring deps** | Search build file for `org.springframework` | Zero Spring dependencies remaining |
-| 3 | **Has Liberty** | Search build file for `io.openliberty` or `liberty-maven-plugin` | Liberty BOM/plugin and at least one Jakarta EE feature present |
-| 4 | **Tests pass** | Maven: `test`; Gradle: `test` (using the detected launcher) | All tests pass using MicroShed or Arquillian |
+| 2 | **Spring dependency scope** | Inspect resolved build dependencies | Complete removal: zero Spring; staged: only contract-approved Spring; rehost: baseline Spring dependencies remain except approved upgrades |
+| 3 | **Has Liberty** | Inspect build and `server.xml` | Rewrite: Liberty plugin plus Jakarta EE features; rehost: Liberty plugin, matching `springBoot-3.0`/`springBoot-4.0`, required web feature, and `springBootApplication` pointing to the actual artifact |
+| 4 | **Tests pass** | Maven: `test`; Gradle: `test` (using the detected launcher) | Rewrite tests use the selected Jakarta/Liberty approach; rehost preserves existing Spring tests and adds only required Liberty smoke coverage |
 | 5 | **Starts up** | Use the time-bounded lifecycle in [modules/run-local.md](modules/run-local.md) | Readiness detected within the recorded timeout; app responds; logs contain no unresolved application errors; process is stopped gracefully |
-| 6 | **No leftover templates** | Search for Thymeleaf references | None remaining unless the contract intentionally retains Thymeleaf |
+| 6 | **View scope** | Inspect templates and view configuration | Rewrite matches the selected view path; rehost preserves baseline Spring view behavior |
 
 Assign the highest evidence level actually achieved:
 
@@ -166,7 +179,7 @@ Assign the highest evidence level actually achieved:
 
 Answer each question honestly:
 
-1. **What migrated cleanly?** Patterns that mapped 1:1.
+1. **What migrated or rehosted cleanly?** Rewritten patterns or preserved hosting behavior.
 2. **What required manual judgment?** Non-obvious decisions made.
 3. **What was left as TODO?** Every `// TODO: Migration required` comment and why.
 4. **Was any code removed?** What, where, justification. Flag runtime risks.
@@ -194,20 +207,21 @@ Present the review as a structured report:
 | Module | Gate | State | Evidence / changed files | Validation | Resume point |
 |---|---|---|---|---|---|
 | jdk | ALWAYS | ... | ... | ... | ... |
+| rehost-spring | ... | ... | ... | ... | ... |
 | build | ... | ... | ... | ... | ... |
 | code | ... | ... | ... | ... | ... |
 | frontend | ... | ... | ... | ... | ... |
 | testing | ... | ... | ... | ... | ... |
-| cleanup | ALWAYS | ... | ... | ... | ... |
-| feature-scan | ALWAYS | ... | ... | ... | ... |
+| cleanup | rewrite only | ... | ... | ... | ... |
+| feature-scan | rewrite only | ... | ... | ... | ... |
 | run-local | ALWAYS | ... | ... | ... | ... |
 
 ### Summary
-- Scope: [Complete Spring removal / Staged migration]
+- Scope: [Complete Spring removal / Staged migration / Retain Spring and rehost]
 - Optional MicroProfile capabilities: [list or none]
 - Agent: [AI agent name, if available]
 - Model: [model name, if available]
-- Modules completed: [X/8]
+- Modules completed: [X/applicable modules]
 - Checks passed: [X/6]
 - Evidence level: [ANALYZED / COMPILED / TESTED / RUNTIME_VERIFIED / BEHAVIOR_PARITY_VERIFIED]
 - Baseline failures: [list or none]
@@ -216,6 +230,7 @@ Present the review as a structured report:
 ### Changes by Module
 | Module | Files changed | Key changes |
 |--------|--------------|-------------|
+| rehost-spring | build file, server.xml | ... |
 | build | pom.xml or build.gradle(.kts), application.properties, server.xml | ... |
 | code | ... | ... |
 | frontend | ... | ... |
@@ -227,7 +242,7 @@ Present the review as a structured report:
 | Check | Result | Evidence |
 |-------|--------|-------|
 | Builds | PASS/FAIL/BLOCKED | command and exit code |
-| No Spring deps | PASS/FAIL | search evidence and staged-scope exceptions |
+| Spring dependency scope | PASS/FAIL | removal, staged exceptions, or rehost preservation evidence |
 | Has Liberty | PASS/FAIL | build and server configuration evidence |
 | Tests pass | PASS/FAIL/BLOCKED | command, counts, and baseline comparison |
 | Starts up | PASS/FAIL/BLOCKED | readiness probe, log path, errors resolved |

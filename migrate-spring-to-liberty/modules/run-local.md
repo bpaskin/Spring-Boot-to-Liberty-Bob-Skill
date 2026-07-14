@@ -2,7 +2,7 @@
 
 Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); record command, timeout, readiness evidence, logs, and cleanup result.
 
-Start the migrated application on Open Liberty locally, read the startup logs, and resolve any errors before declaring the migration complete.
+Start the migrated or rehosted application on Open Liberty locally, read the startup logs, and resolve any errors before declaring the work complete.
 
 ## What to do
 
@@ -19,18 +19,27 @@ Start the migrated application on Open Liberty locally, read the startup logs, a
 
 Before starting, record the command, expected context root, readiness URL, log paths, and timeout in the migration ledger. Use 180 seconds unless the baseline or first-download conditions justify another explicit value. Confirm required ports are available and required external services are either running or documented as blockers.
 
-Use `liberty:dev` / `libertyDev` for the normal iterative path. Start it in a controllable foreground/PTY session, poll output in short intervals, and never wait silently past the recorded deadline.
+For a Jakarta rewrite, use `liberty:dev` / `libertyDev` for the normal iterative path. For a retained-Spring rehost, use Maven's documented `liberty:run` goal or the verified foreground task exposed by the pinned Gradle plugin for the first parity run. Start it in a controllable foreground/PTY session, poll output in short intervals, and never wait silently past the recorded deadline.
 
 Use the detected wrapper when present and the installed Maven/Gradle launcher otherwise; the commands below show wrapper form.
 
 **Maven:**
 ```bash
+# Rewrite
 ./mvnw liberty:dev
+
+# Retain Spring and rehost
+./mvnw liberty:run
 ```
 
 **Gradle:**
 ```bash
+# Rewrite
 ./gradlew libertyDev
+
+# Retain Spring and rehost: inspect the pinned plugin's available foreground tasks,
+# then record and use the documented task for that version.
+./gradlew tasks --group liberty
 ```
 
 Watch for this line in the console — it means the server is ready:
@@ -124,7 +133,7 @@ CWWKF0033E: The feature xxx-Y.Z conflicts with the currently installed feature y
 
 ---
 
-### 2. Application failed to start — WAR not found
+### 2. Application artifact not found
 
 **Symptom:**
 ```
@@ -132,6 +141,7 @@ CWWKZ0014W: The application <name> could not be started as it could not be found
 ```
 
 **Fix:**
+- For a rehost, verify `<springBootApplication location="..."/>` names the actual executable Spring Boot JAR/WAR and that the matching `springBoot-3.0` or `springBoot-4.0` feature is enabled. Do not replace it with `<webApplication>`.
 - Use `./mvnw liberty:dev` / `./gradlew libertyDev` — this builds and deploys automatically; no separate package step is needed.
 - Verify `<webApplication location="..."/>` in `server.xml` uses `${server.config.dir}/apps/<artifactId>.war`.
 - The `<finalName>` in `pom.xml` (or `archiveFileName` in Gradle) must match the WAR location in `server.xml`.

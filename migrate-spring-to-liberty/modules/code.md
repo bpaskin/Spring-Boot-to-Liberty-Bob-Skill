@@ -2,6 +2,8 @@
 
 Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); migrate only the confirmed scope and resume from semantic evidence rather than annotation counts alone.
 
+If the contract selects retain Spring and rehost, log this module as `SKIP` and stop. Spring application code must remain unchanged on the rehost path.
+
 Migrate all Java source code from Spring patterns to Jakarta EE 11 / CDI / JAX-RS equivalents.
 
 Load [references/annotation-map.md](../references/annotation-map.md) before starting. It contains the complete annotation mapping tables for DI, REST, Data, Security, Cache, Scheduling, and Lifecycle.

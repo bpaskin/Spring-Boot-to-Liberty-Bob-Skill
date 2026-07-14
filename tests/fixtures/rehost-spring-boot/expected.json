@@ -5,5 +5,5 @@
   "testing": "PASS",
   "coverage_risk": false,
   "repository_strategy_required": false,
-  "rehost_candidate": false
+  "rehost_candidate": true
 }

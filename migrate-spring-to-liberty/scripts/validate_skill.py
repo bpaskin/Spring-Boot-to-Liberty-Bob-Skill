@@ -45,6 +45,8 @@ REQUIRED_CANONICAL_FEATURES = {
     "data-1.0",
 }
 
+REQUIRED_REHOST_FEATURES = {"springBoot-3.0", "springBoot-4.0"}
+
 ALLOWED_DECLARED_FEATURES = REQUIRED_CANONICAL_FEATURES | {
     "appSecurity-6.0",
     "cdi-4.1",
@@ -64,6 +66,8 @@ ALLOWED_DECLARED_FEATURES = REQUIRED_CANONICAL_FEATURES | {
     "persistence-3.2",
     "restfulWS-4.0",
     "servlet-6.1",
+    "springBoot-3.0",
+    "springBoot-4.0",
     "validation-3.1",
     "webProfile-11.0",
     "wmqJmsClient-3.0",
@@ -136,6 +140,18 @@ def validate_invariants(errors: list[str]) -> None:
     for feature in sorted(REQUIRED_CANONICAL_FEATURES):
         if feature not in canonical:
             errors.append(f"canonical feature reference is missing {feature}")
+
+    rehost = (SKILL_ROOT / "modules" / "rehost-spring.md").read_text(encoding="utf-8")
+    for feature in sorted(REQUIRED_REHOST_FEATURES):
+        if feature not in rehost:
+            errors.append(f"rehost module is missing {feature}")
+    for required_text in (
+        "Do not run the rewrite",
+        "<springBootApplication",
+        "REHOSTED — SPRING RETAINED",
+    ):
+        if required_text not in rehost:
+            errors.append(f"rehost module is missing safety text {required_text!r}")
 
 
 def validate_links(errors: list[str]) -> None:
@@ -227,6 +243,16 @@ def classify_fixture(root: Path) -> dict[str, str | bool]:
 
     test_files = [path for path in root.rglob("*") if path.is_file() and "src/test" in path.as_posix()]
     testing = "PASS" if test_files else "SKIP"
+    supported_boot_stream = bool(
+        re.search(
+            r"spring-boot-starter-parent[\s\S]{0,300}<version>[34]\.",
+            build_text,
+        )
+        or re.search(r"org\.springframework\.boot[^\n]*version\s*[=(]?['\"]?[34]\.", build_text)
+    )
+    spring_bootstrap = (
+        "@SpringBootApplication" in main_text or "SpringApplication.run(" in main_text
+    )
 
     return {
         "build": build,
@@ -241,6 +267,7 @@ def classify_fixture(root: Path) -> dict[str, str | bool]:
                 "org.springframework.data.jpa.repository",
             )
         ),
+        "rehost_candidate": supported_boot_stream and spring_bootstrap,
     }
 
 
@@ -249,8 +276,8 @@ def validate_fixtures(errors: list[str]) -> None:
         errors.append("tests/fixtures: evaluation fixtures are missing")
         return
     fixtures = sorted(path for path in FIXTURES_ROOT.iterdir() if path.is_dir())
-    if len(fixtures) < 5:
-        errors.append("tests/fixtures: expected at least five representative scenarios")
+    if len(fixtures) < 6:
+        errors.append("tests/fixtures: expected at least six representative scenarios")
     for fixture in fixtures:
         expected_path = fixture / "expected.json"
         if not expected_path.is_file():

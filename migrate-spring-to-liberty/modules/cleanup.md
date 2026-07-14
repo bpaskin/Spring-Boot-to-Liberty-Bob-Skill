@@ -2,6 +2,8 @@
 
 Follow the shared [migration ledger and transaction protocol](../references/migration-ledger.md); do not remove artifacts excluded by a staged contract.
 
+If the contract selects retain Spring and rehost, log this module as `SKIP` and stop. Spring artifacts are intentional on that path.
+
 Remove leftover Spring artifacts that survived the per-module migration: orphaned imports, unused dependencies, stale configuration, and the Spring Boot main class (if not already removed).
 
 ## What to do
