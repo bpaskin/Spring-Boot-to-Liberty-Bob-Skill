@@ -13,6 +13,7 @@ from urllib.parse import unquote
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = SKILL_ROOT.parent
 FIXTURES_ROOT = REPO_ROOT / "tests" / "fixtures"
+E2E_ROOT = REPO_ROOT / "tests" / "e2e"
 
 INVALID_TEXT = {
     "<feature>beanValidation-3.1</feature>": "Jakarta EE 11 uses validation-3.1",
@@ -59,6 +60,7 @@ ALLOWED_DECLARED_FEATURES = REQUIRED_CANONICAL_FEATURES | {
     "microProfile-7.0",
     "mpConfig-3.1",
     "mpHealth-4.0",
+    "mpFaultTolerance-4.1",
     "mpJwt-2.1",
     "openidConnectClient-1.0",
     "mpMetrics-5.1",
@@ -174,6 +176,31 @@ def validate_invariants(errors: list[str]) -> None:
     ):
         if required_text not in security:
             errors.append(f"security module is missing safety text {required_text!r}")
+
+    async_events = (SKILL_ROOT / "modules" / "async-events.md").read_text(encoding="utf-8")
+    for required_text in (
+        "ManagedExecutorService",
+        "@ObservesAsync",
+        "TransactionPhase",
+        "`NESTED`",
+        "RetryListener",
+        "backpressure",
+    ):
+        if required_text not in async_events:
+            errors.append(f"async/events module is missing safety text {required_text!r}")
+
+    deploy = (SKILL_ROOT / "modules" / "deploy.md").read_text(encoding="utf-8")
+    for required_text in (
+        "separate explicit authorization",
+        "kernel-slim",
+        "features.sh",
+        "configure.sh",
+        "/health/started",
+        "dry-run",
+        "SBOM",
+    ):
+        if required_text not in deploy:
+            errors.append(f"deployment module is missing safety text {required_text!r}")
 
 
 def validate_links(errors: list[str]) -> None:
@@ -293,10 +320,37 @@ def classify_fixture(root: Path) -> dict[str, str | bool]:
         marker in test_text.lower()
         for marker in ("unauthorized", "forbidden", "csrf", "jwt", "status().is4")
     )
+    async_event_strategy_required = any(
+        marker in main_text
+        for marker in (
+            "@Async",
+            "ApplicationEventPublisher",
+            "@EventListener",
+            "@TransactionalEventListener",
+            "AsyncConfigurer",
+            "TaskExecutor",
+            "@Retryable",
+            "RetryTemplate",
+            "RetryListener",
+            "Propagation.",
+            "isolation =",
+        )
+    )
+    deployment_artifacts_present = any(
+        path.is_file()
+        and (
+            path.name in {"Dockerfile", "Containerfile", "Chart.yaml", "kustomization.yaml"}
+            or path.suffix in {".yaml", ".yml"}
+            and any(part in {"k8s", "kubernetes", "deploy", "helm"} for part in path.parts)
+        )
+        for path in root.rglob("*")
+    )
 
     return {
         "build": build,
         "code": code,
+        "async_event_strategy_required": async_event_strategy_required,
+        "deployment_artifacts_present": deployment_artifacts_present,
         "security_strategy_required": security_strategy_required,
         "security_test_gap": security_strategy_required and not security_test_evidence,
         "frontend": frontend,
@@ -318,8 +372,8 @@ def validate_fixtures(errors: list[str]) -> None:
         errors.append("tests/fixtures: evaluation fixtures are missing")
         return
     fixtures = sorted(path for path in FIXTURES_ROOT.iterdir() if path.is_dir())
-    if len(fixtures) < 6:
-        errors.append("tests/fixtures: expected at least six representative scenarios")
+    if len(fixtures) < 8:
+        errors.append("tests/fixtures: expected at least eight representative scenarios")
     for fixture in fixtures:
         expected_path = fixture / "expected.json"
         if not expected_path.is_file():
@@ -334,12 +388,35 @@ def validate_fixtures(errors: list[str]) -> None:
             )
 
 
+def validate_e2e(errors: list[str]) -> None:
+    manifest = E2E_ROOT / "scenarios.json"
+    runner = SKILL_ROOT / "scripts" / "run_e2e.py"
+    if not manifest.is_file() or not runner.is_file():
+        errors.append("tests/e2e: golden manifest and runner are required")
+        return
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    scenarios = data.get("scenarios", [])
+    names = {scenario.get("name") for scenario in scenarios}
+    required = {"maven-security-events", "gradle-data-frontend", "partial-resume"}
+    if data.get("schema_version") != 1 or not required.issubset(names):
+        errors.append("tests/e2e: required Maven, Gradle, and partial-resume scenarios are missing")
+    workflow = REPO_ROOT / ".github" / "workflows" / "compatibility.yml"
+    if not workflow.is_file():
+        errors.append("online compatibility workflow is missing")
+    else:
+        workflow_text = workflow.read_text(encoding="utf-8")
+        for required_text in ("schedule:", "workflow_dispatch:", "--mode build", "--mode runtime"):
+            if required_text not in workflow_text:
+                errors.append(f"compatibility workflow is missing {required_text!r}")
+
+
 def main() -> int:
     errors: list[str] = []
     validate_frontmatter(errors)
     validate_invariants(errors)
     validate_links(errors)
     validate_fixtures(errors)
+    validate_e2e(errors)
     if not (REPO_ROOT / "LICENSE").is_file():
         errors.append("repository is missing LICENSE")
 

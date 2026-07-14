@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "name": "maven-security-events",
+      "build_system": "maven",
+      "before": "maven-security-events/before",
+      "after": "maven-security-events/after",
+      "required_after": ["jakarta.ws.rs", "@RolesAllowed", "@Observes", "ManagedExecutorService", "status == 401", "status == 403"],
+      "forbidden_after": ["org.springframework"],
+      "build": [["mvn", "-B", "-ntp", "clean", "test", "package"]],
+      "compatibility": [
+        ["mvn", "-B", "-ntp", "liberty:create", "liberty:deploy"],
+        ["target/liberty/wlp/bin/featureUtility", "installServerFeatures", "defaultServer", "--acceptLicense"]
+      ],
+      "runtime": {
+        "start": ["target/liberty/wlp/bin/server", "start", "defaultServer"],
+        "timeout_seconds": 120,
+        "probes": [
+          {"url": "http://127.0.0.1:19080/e2e/api/status", "status": 200, "contains": "ok"},
+          {"url": "http://127.0.0.1:19080/e2e/api/status/admin", "status": 401}
+        ],
+        "stop": ["target/liberty/wlp/bin/server", "stop", "defaultServer"]
+      }
+    },
+    {
+      "name": "gradle-data-frontend",
+      "build_system": "gradle",
+      "before": "gradle-data-frontend/before",
+      "after": "gradle-data-frontend/after",
+      "required_after": ["jakarta.data.repository", "dataStore = \"TodoStore\"", "CsrfGuard", "missing token", "invalid token"],
+      "forbidden_after": ["org.springframework"],
+      "build": [["gradle", "--no-daemon", "clean", "test", "war"]]
+    },
+    {
+      "name": "partial-resume",
+      "build_system": "none",
+      "before": "partial-resume/before",
+      "after": "partial-resume/after",
+      "allow_spring_after": true,
+      "required_after": ["org.springframework", "jakarta.ws.rs", "Gate result: PARTIAL", "Resume point:"],
+      "forbidden_after": []
+    }
+  ]
+}

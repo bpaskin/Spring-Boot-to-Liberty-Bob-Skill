@@ -50,6 +50,9 @@ grep -rn "jakarta.validation\|@NotNull\|@NotBlank\|@Size\|@Min\|@Max\|@Valid\|@V
 # Jakarta Transactions
 grep -rn "jakarta.transaction\|@Transactional" src/main/java/
 
+# Jakarta Concurrency / CDI events
+grep -rn "jakarta.enterprise.concurrent\|ManagedExecutorService\|ManagedScheduledExecutorService\|@Asynchronous\|@Observes\|@ObservesAsync\|Event<" src/main/java/
+
 # Jakarta Security / Roles / annotated OIDC
 grep -rn "jakarta.annotation.security\|@RolesAllowed\|@DeclareRoles\|@PermitAll\|@DenyAll\|appSecurity\|SecurityContext\|OpenIdAuthenticationMechanismDefinition" src/main/java/
 
@@ -131,6 +134,7 @@ Use the scan results and the table below to determine which features are require
 | `jakarta.data.*`, Jakarta Data `@Repository`, `DataRepository`, `BasicRepository`, or `CrudRepository` | `data-1.0`; also add `persistence-3.2` for Jakarta Persistence entities |
 | `@NotNull`, `@NotBlank`, `@Valid`, `@Size`, Jakarta Validation imports | `validation-3.1` |
 | `@Transactional` (jakarta.transaction) | `transaction-2.0` |
+| Jakarta Concurrency imports, managed executors, or Jakarta Concurrency `@Asynchronous` | `concurrent-3.1` |
 | `@RolesAllowed`, `@DeclareRoles`, Security APIs, or an authentication configuration in `server.xml` | `appSecurity-6.0` |
 | `@OpenIdAuthenticationMechanismDefinition` | `appSecurity-6.0` |
 | `<openidConnectClient>` or a contract-selected Liberty-managed browser OIDC client | `openidConnectClient-1.0` |
@@ -170,6 +174,8 @@ Always add `jsonb-3.0` and `jsonp-2.1` whenever `restfulWS-4.0` is enabled. This
 - **`appSecurity-6.0` requires an authentication design** — do not infer a registry, OIDC provider, or JWT trust configuration from authorization annotations alone.
 - **Choose one browser OIDC owner** — annotated Jakarta Security OIDC uses `appSecurity-6.0`; an explicit Liberty-managed client uses `openidConnectClient-1.0`. Do not configure both for the same entry point.
 - **`mpJwt-2.1` requires `mpConfig-3.1`** — always add both together.
+- **Executor presence is not enough to infer defaults** — `concurrent-3.1` supplies managed execution, but pool, queue, context, rejection, and shutdown behavior still come from the async/events contract.
+- **`mpFaultTolerance-4.1` does not reproduce Spring Retry listeners or recovery mechanically** — add it only after the retry contract selects MicroProfile Fault Tolerance.
 
 ## Step 3 — Update server.xml
 

@@ -122,6 +122,19 @@ public class ScheduledTask {
 
 Add `enterpriseBeansLite-4.0` or `enterpriseBeans-4.0` to `server.xml` when using EJB timers.
 
+## Async, events, transactions, and retry
+
+Use the dedicated [async/events module](../modules/async-events.md). These mappings are candidates only; executor, event, transaction, and recovery semantics require an execution matrix and tests.
+
+| Spring | Jakarta/MicroProfile candidate | Boundary |
+|---|---|---|
+| `@Async` / `TaskExecutor` | Jakarta Concurrency `ManagedExecutorService` with `concurrent-3.1` | Preserve executor selection, context, queue/rejection, failure, cancellation, and shutdown |
+| `ApplicationEventPublisher` / `@EventListener` | CDI `Event.fire()` / `@Observes` | Verify synchronous ordering and exception propagation |
+| asynchronous event listener | CDI `fireAsync()` / `@ObservesAsync`, or managed-executor dispatch | Async observers cannot also be transactional observers |
+| `@TransactionalEventListener` | `@Observes(during = TransactionPhase...)` | Match the exact transaction phase |
+| Spring transaction propagation | Jakarta `@Transactional(TxType...)` where supported | `NESTED`, isolation, timeout, read-only, and manager selection need explicit handling |
+| `@Retryable` | MicroProfile Fault Tolerance `@Retry` when compatible | Listener hooks, stateful retry, context, and `@Recover` are not mechanical mappings |
+
 ## Security (Spring Security → MicroProfile JWT / Jakarta Security)
 
 Use the dedicated [security module](../modules/security.md) for the security contract, filter chains, authentication, authorization semantics, CSRF/CORS, sessions/logout, and negative tests. The entries below are candidate mappings, not permission to perform a bulk annotation rewrite.

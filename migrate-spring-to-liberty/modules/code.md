@@ -9,7 +9,7 @@ Migrate all Java source code from Spring patterns to Jakarta EE 11 / CDI / JAX-R
 Load [references/annotation-map.md](../references/annotation-map.md) before starting. It contains the annotation mapping tables for DI, REST, Data, Cache, Scheduling, and Lifecycle, plus security routing guidance.
 When Spring Data repository interfaces are present, also load [references/jakarta-data.md](../references/jakarta-data.md) and apply the repository strategy recorded in the migration contract.
 
-The dedicated [security module](security.md) owns `SecurityFilterChain`, authentication mechanisms, authorization expressions, CSRF/CORS, sessions, logout, trust, and security tests. Inventory security references here, but do not migrate or remove them in this module.
+The dedicated [security module](security.md) owns `SecurityFilterChain`, authentication mechanisms, authorization expressions, CSRF/CORS, sessions, logout, trust, and security tests. The [async/events module](async-events.md) owns `@Async`, executor configuration, application events, non-default transaction semantics, Spring Retry/listeners, and their failure tests. Inventory these references here, but do not migrate or remove them in this module.
 
 ## What to do
 
