@@ -66,6 +66,17 @@ Map each control and its corresponding error output together:
 
 Preserve the original field names when clients, JavaScript, tests, or downstream handlers depend on them. For dotted or indexed paths, define an explicit flattening/reconstruction rule and cap collection sizes; never reproduce unbounded Spring auto-growth. Recreate error classes, `aria-invalid`, `aria-describedby`, and escaped submitted values so a validation failure remains usable and safe.
 
+The Thymeleaf `#fields` utility is supplied by the Thymeleaf-Spring integration and is not available in a core Thymeleaf context. Have the controller always add an `errors` map—even an empty map on the initial GET—and replace field checks and output explicitly:
+
+```html
+<input name="name" th:value="${owner.name}"
+       th:attr="aria-invalid=${errors.containsKey('name')}" />
+<p th:if="${errors.containsKey('name')}"
+   th:text="${errors.get('name')}"></p>
+```
+
+For a loop whose current field key is stored in `name`, the direct replacement for `#fields.hasErrors(name)` is `${errors.containsKey(name)}` and its dynamic message can use `th:text="${errors.get(name)}"`. Replace `th:errors` at the same time, keep messages escaped through `th:text`, and render global errors from a separate explicit collection.
+
 Do not blindly rewrite `${...}` to `#{...}` or `*{...}` to `${...}`. The target expression depends on the selected view technology, model owner, lifecycle, and escaping rules.
 
 ## Protect the binding boundary

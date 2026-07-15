@@ -21,6 +21,14 @@ Run representative reads/writes, query ordering/pagination, optimistic/pessimist
 
 Generate reviewable datasource, library, persistence, and variable scaffolding without embedding credentials. Verify driver visibility: server-managed resources require a Liberty library rather than a driver hidden inside the WAR. Preserve explicit table/column names where Spring naming strategies differ from the target provider.
 
+## Diagnose schema and entity-enhancement regressions
+
+- **Empty schema after startup:** do not assume a CDI bean's `@PostConstruct` method runs at application startup; normal bean instantiation can be lazy. Move required, non-destructive initialization to an `@Observes Startup` observer, make it idempotent and transaction-aware, and fail readiness when it cannot complete.
+- **Expected table reported as missing:** resolve the repository's `dataStore` value before changing entity mappings. A Liberty `databaseStore` ID owns table policy and can apply its configured schema or `tablePrefix`, producing names that differ from an existing Spring-managed schema. For a pre-existing schema, bind directly to the reviewed datasource JNDI name (for example, `@Repository(dataStore = "jdbc/<name>")`, replacing the `<name>` placeholder with the configured datasource name) or to an explicit persistence-unit reference when that is the selected contract. Capture generated SQL and compare the fully qualified table name with the live schema.
+- **`IllegalAccessError` while traversing a lazy relationship:** inspect the provider stack trace and enhancement/weaving configuration. EclipseLink weaving may need to enhance entity classes or relationship accessors; `final` on the affected provider-managed class, field, or accessor can block that enhancement. Remove only the `final` modifier proven to block weaving, or select a supported access/fetch configuration—do not mechanically make the entire model mutable. Clean-rebuild the WAR and test both sides of every affected association inside the intended transaction boundary.
+
+After each fix, rerun startup, schema inspection, representative repository operations, and lazy-association traversal. A successful deployment alone does not prove the persistence model is usable.
+
 ## Completion criteria
 
 Require durable-state comparison and transaction-recovery evidence. A successful connection, compile, or single-resource rollback does not prove XA or schema parity.
