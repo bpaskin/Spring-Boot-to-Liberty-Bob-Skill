@@ -82,6 +82,8 @@ public interface OwnerRepository extends CrudRepository<Owner, Integer> {
 }
 ```
 
+Replace the `<name>` placeholder with the application's configured datasource JNDI suffix; never emit or deploy `jdbc/<name>` literally.
+
 During verification, enable/capture provider SQL and compare the resolved catalog, schema, and table name with the live database. A symptom such as `WLPowners table not found` is evidence to inspect `databaseStore` schema/`tablePrefix` policy and the resolved `dataStore` binding before renaming the database table.
 
 Non-destructive `databaseStore` example for the repository above:

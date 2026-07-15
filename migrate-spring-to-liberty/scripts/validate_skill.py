@@ -248,6 +248,7 @@ def validate_invariants(errors: list[str]) -> None:
     for required_text in (
         "tablePrefix",
         '@Repository(dataStore = "jdbc/<name>")',
+        "never emit or deploy `jdbc/<name>` literally",
         "Do not treat a `databaseStore` ID as an alias",
     ):
         if required_text not in jakarta_data:
