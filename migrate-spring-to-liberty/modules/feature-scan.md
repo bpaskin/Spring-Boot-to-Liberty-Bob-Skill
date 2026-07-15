@@ -20,7 +20,7 @@ A lean `featureManager` block:
 - [ ] Scan `microprofile-config.properties` for MicroProfile API usage
 - [ ] Build the required feature list from the scan results (use the Feature Trigger Table below)
 - [ ] Update `src/main/liberty/config/server.xml` — replace umbrella features with the precise list
-- [ ] Verify: `./mvnw liberty:install-feature` (Maven) or `./gradlew libertyInstallFeature` (Gradle)
+- [ ] Create the Liberty assembly, then verify features: `./mvnw liberty:create` followed by `./mvnw liberty:install-feature` (Maven), or `./gradlew libertyCreate` followed by `./gradlew libertyInstallFeature` (Gradle)
 - [ ] Compile: `./mvnw clean compile -DskipTests` (Maven) or `./gradlew clean compileJava -x test` (Gradle)
 
 ## Step 1 — Scan the Migrated Application
@@ -233,17 +233,19 @@ After updating `server.xml`, install the declared features and recompile to conf
 
 **Maven:**
 ```bash
+./mvnw liberty:create
 ./mvnw liberty:install-feature
 ./mvnw clean compile -DskipTests
 ```
 
 **Gradle:**
 ```bash
+./gradlew libertyCreate
 ./gradlew libertyInstallFeature
 ./gradlew clean compileJava -x test
 ```
 
-`liberty:install-feature` / `libertyInstallFeature` downloads any feature JARs not already in the local Liberty installation and validates that the feature names are recognised.
+`liberty:create` / `libertyCreate` first installs the configured Liberty assembly and creates the server. `liberty:install-feature` / `libertyInstallFeature` requires that pre-installed assembly; it then downloads any feature JARs not already in the local Liberty installation and validates that the feature names are recognised. Use the detected build launcher, and repeat the create step when the local assembly is missing or the pinned Liberty version changes.
 
 If `liberty:install-feature` reports an unknown feature name:
 - Check the exact name against the [Open Liberty feature list](https://openliberty.io/docs/latest/reference/feature/feature-overview.html)

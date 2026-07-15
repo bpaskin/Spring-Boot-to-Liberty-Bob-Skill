@@ -132,7 +132,7 @@ Scan the original `pom.xml` for dependencies whose `groupId` does **not** start 
 
 > **Do NOT use `io.openliberty:openliberty-kernel`**. Always use `io.openliberty:openliberty-runtime` when a Liberty runtime artifact must be referenced. The Liberty server installation is managed by the `liberty-maven-plugin` via `server.xml` — do not add it as a `<dependency>`.
 >
-> **Pin the Open Liberty runtime version.** Reuse the project's documented platform version when it supports Jakarta EE 11, or resolve a current supported release from official Open Liberty release metadata. Record the selected version in one Maven property, use it consistently, and verify it by running `liberty:install-feature`. Do not scrape an HTML directory listing or silently select a moving "latest" version during migration.
+> **Pin the Open Liberty runtime version.** Reuse the project's documented platform version when it supports Jakarta EE 11, or resolve a current supported release from official Open Liberty release metadata. Record the selected version in one Maven property, use it consistently, and verify it by running `liberty:create` before `liberty:install-feature`. Do not scrape an HTML directory listing or silently select a moving "latest" version during migration.
 
 **Add** the `liberty-maven-plugin`, `jandex-maven-plugin`, and update compiler/surefire:
 ```xml
@@ -212,9 +212,19 @@ The plugin runs automatically after compilation. No additional configuration is 
 
 | Goal | Description |
 |---|---|
-| `liberty:install-feature` | Install features declared in `server.xml` |
+| `liberty:create` | Install the configured Liberty assembly and create the server; run this before feature installation |
+| `liberty:install-feature` | Install features declared in `server.xml`; requires the Liberty assembly created by `liberty:create` |
 | `liberty:dev` | **Create server, deploy app, and start in dev mode (hot reload) — always use this** |
 | `liberty:package` | Package server + app into a runnable JAR or ZIP |
+
+For explicit feature validation, create the pinned Liberty runtime first. `liberty:install-feature` does not install a missing Liberty assembly:
+
+```bash
+./mvnw liberty:create
+./mvnw liberty:install-feature
+```
+
+Use the detected Maven launcher (`./mvnw` when present, otherwise `mvn`). Run `liberty:create` again when the local Liberty installation is absent or the pinned runtime version changes.
 
 ## Testing the Application
 

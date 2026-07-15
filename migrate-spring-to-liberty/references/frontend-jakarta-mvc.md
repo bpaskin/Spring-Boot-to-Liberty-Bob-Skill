@@ -2,6 +2,8 @@
 
 Load this reference only when the migration contract selects Jakarta MVC for Spring MVC views.
 
+When `@ModelAttribute`, `BindingResult`, Spring form tags, `th:field`, or `#fields` is present, apply the shared [binding-expression contract](frontend-binding-expressions.md) to the controller and template together.
+
 ## Contents
 
 - [Dependencies and features](#dependencies-and-features)

@@ -2,6 +2,8 @@
 
 Load this reference only when the migration contract explicitly retains Thymeleaf.
 
+Apply the shared [binding-expression contract](frontend-binding-expressions.md) when Spring MVC or the Thymeleaf Spring dialect owns form population, conversion, validation, or error rendering.
+
 ## Contents
 
 - [Dependencies](#dependencies)

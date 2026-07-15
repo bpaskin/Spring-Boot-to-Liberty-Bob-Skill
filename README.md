@@ -185,6 +185,7 @@ The skill uses canonical mapping references plus conditionally loaded frontend a
 | [`references/frontend-faces.md`](migrate-spring-to-liberty/references/frontend-faces.md) | Loaded only when the contract selects Jakarta Faces |
 | [`references/frontend-thymeleaf.md`](migrate-spring-to-liberty/references/frontend-thymeleaf.md) | Loaded only when core Thymeleaf is intentionally retained |
 | [`references/frontend-jsp-rest.md`](migrate-spring-to-liberty/references/frontend-jsp-rest.md) | Loaded for confirmed JSP/static paths or REST-only applications |
+| [`references/frontend-binding-expressions.md`](migrate-spring-to-liberty/references/frontend-binding-expressions.md) | Loaded when Spring MVC binders, Spring form tags, or Thymeleaf field/error expressions must be replaced without losing conversion, validation, or over-posting protection |
 
 ---
 

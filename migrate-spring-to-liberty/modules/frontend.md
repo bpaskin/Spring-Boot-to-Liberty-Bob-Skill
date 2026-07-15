@@ -4,13 +4,14 @@ Follow the shared [migration ledger and transaction protocol](../references/migr
 
 If the contract selects retain Spring and rehost, log this module as `SKIP` and stop. Preserve Spring MVC, Thymeleaf, templates, static assets, and CSRF integration for parity testing.
 
-Classify the view layer, load exactly one scenario reference, preserve browser behavior, and implement the CSRF contract established by the [security module](security.md) before removing Spring integration. Do not independently choose a new authentication, CSRF, CORS, session, or logout policy here.
+Classify the view layer, load exactly one scenario reference, preserve browser behavior, and implement the CSRF contract established by the [security module](security.md) before removing Spring integration. When Spring MVC binding evidence is present, also load the shared [binding-expression reference](../references/frontend-binding-expressions.md). Do not independently choose a new authentication, CSRF, CORS, session, or logout policy here.
 
 ## What to do
 
 - [ ] Re-read the migration contract and current source; do not repeat an answered view question
 - [ ] Classify the application using semantic evidence, not template paths alone
 - [ ] Load only the selected scenario reference
+- [ ] Inventory and replace controller/template binding as one contract; preserve submitted values, conversion, validation, errors, and allowed fields
 - [ ] Preserve routes, form methods, validation messages, redirects, content types, and static-asset URLs
 - [ ] Replace and negative-test CSRF protection before removing Spring tokens
 - [ ] Compile with the detected build launcher and update the module ledger
@@ -19,7 +20,7 @@ Classify the view layer, load exactly one scenario reference, preserve browser b
 
 | Scenario | Evidence | Load |
 |---|---|---|
-| Server-rendered Spring MVC | `@Controller`, `Model`/`ModelAndView`, view-name returns, MVC config, or Thymeleaf templates used by controllers | The one contract-selected reference: [Jakarta MVC](../references/frontend-jakarta-mvc.md), [Jakarta Faces](../references/frontend-faces.md), or [retained Thymeleaf](../references/frontend-thymeleaf.md) |
+| Server-rendered Spring MVC | `@Controller`, `Model`/`ModelAndView`, view-name returns, MVC config, Thymeleaf templates used by controllers, `@ModelAttribute`/`BindingResult`/`@InitBinder`, `th:field`/`#fields`, or Spring JSP form tags | The one contract-selected reference: [Jakarta MVC](../references/frontend-jakarta-mvc.md), [Jakarta Faces](../references/frontend-faces.md), or [retained Thymeleaf](../references/frontend-thymeleaf.md); also load [binding expressions](../references/frontend-binding-expressions.md) when detected |
 | Thymeleaf without Spring MVC controllers | Templates exist but no server-rendered `@Controller`; determine who renders them before editing | [JSP and REST paths](../references/frontend-jsp-rest.md) |
 | REST-only | `@RestController`/HTTP APIs with no server-rendered views; static SPA assets may still exist | [JSP and REST paths](../references/frontend-jsp-rest.md) |
 | Static assets only | Files under `static/`, `public/`, or equivalent with no server-side view engine | This module's static-assets section only |
@@ -64,13 +65,14 @@ Jakarta REST endpoints using bearer tokens and no browser cookie authentication 
 ## Verification
 
 - Compile using the detected launcher.
-- Run view/controller tests and CSRF positive/negative tests.
-- Start Liberty through the time-bounded runtime module and exercise representative GET, validation-error, POST, redirect, and static-asset paths.
+- Run view/controller tests, binding/conversion/over-posting tests, and CSRF positive/negative tests.
+- Start Liberty through the time-bounded runtime module and exercise representative GET, validation-error, conversion-error, POST, redirect, and static-asset paths.
 - Compare status, content type, route, and visible behavior with the baseline.
 
 ## Watch out
 
 - `@Controller` without an adjacent template is still frontend evidence; the template may be generated, external, or missing.
 - Spring Security Thymeleaf dialects and Spring EL objects do not work with core Thymeleaf alone.
+- Do not rewrite `${...}` or `*{...}` without proving which view engine, model root, and binding owner evaluates it.
 - JSP/JSTL is not an automatic replacement for every standalone Thymeleaf use.
 - Preserve explicit context roots and URL encoding; do not hard-code `/` assumptions.

@@ -2,6 +2,8 @@
 
 Load this reference for REST-only applications or Thymeleaf/templates that are not rendered by Spring MVC controllers.
 
+For a confirmed JSP form migrated from Spring MVC tags or binding expressions, also apply the shared [binding-expression contract](frontend-binding-expressions.md).
+
 ## Contents
 
 - [Determine the rendering owner](#determine-the-rendering-owner)

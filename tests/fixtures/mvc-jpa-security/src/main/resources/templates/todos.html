@@ -1,4 +1,7 @@
-<form method="post" action="/todos">
+<form method="post" th:action="@{/todos}" th:object="${todoForm}">
+  <label for="title">Title</label>
+  <input id="title" th:field="*{title}">
+  <p th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
   <input type="hidden" name="_csrf" value="token">
   <button type="submit">Add</button>
 </form>

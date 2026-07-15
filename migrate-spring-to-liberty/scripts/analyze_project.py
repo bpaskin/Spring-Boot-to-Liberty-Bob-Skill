@@ -85,7 +85,22 @@ CAPABILITIES = (
         "modules/frontend.md",
         "medium",
         "contract-selected-view",
-        ("thymeleaf", "ModelAndView", "org.springframework.ui.Model", "@Controller"),
+        (
+            "thymeleaf",
+            "ModelAndView",
+            "org.springframework.ui.Model",
+            "@Controller",
+            "@ModelAttribute",
+            "BindingResult",
+            "@InitBinder",
+            "WebDataBinder",
+            "th:field",
+            "th:errors",
+            "#fields",
+            "<form:form",
+            "<form:input",
+            "<spring:bind",
+        ),
     ),
     CapabilityDefinition(
         "repositories",
@@ -276,7 +291,6 @@ def evidence_for(root: Path, files: list[Path], markers: tuple[str, ...]) -> lis
         for marker in markers:
             if marker.lower() in searchable.lower():
                 evidence.append({"path": path.relative_to(root).as_posix(), "marker": marker})
-                break
     return evidence[:25]
 
 

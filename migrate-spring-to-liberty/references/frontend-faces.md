@@ -2,6 +2,8 @@
 
 Load this reference only when the migration contract selects Jakarta Faces for Spring MVC views.
 
+When `@ModelAttribute`, `BindingResult`, Spring form tags, `th:field`, or `#fields` is present, apply the shared [binding-expression contract](frontend-binding-expressions.md) and replace custom binders with explicit Faces converters/validators.
+
 ## Contents
 
 - [Runtime](#runtime)

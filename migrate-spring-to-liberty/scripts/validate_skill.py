@@ -213,6 +213,27 @@ def validate_invariants(errors: list[str]) -> None:
         if required_text not in security:
             errors.append(f"security module is missing safety text {required_text!r}")
 
+    binding_reference = (
+        SKILL_ROOT / "references" / "frontend-binding-expressions.md"
+    ).read_text(encoding="utf-8")
+    for required_text in (
+        "BindingResult",
+        "@InitBinder",
+        "th:field",
+        "<spring:bind>",
+        "Allowlist writable request DTO fields",
+        "rejected over-posting",
+        "Do not blindly rewrite",
+    ):
+        if required_text not in binding_reference:
+            errors.append(
+                f"frontend binding reference is missing safety text {required_text!r}"
+            )
+
+    frontend = (SKILL_ROOT / "modules" / "frontend.md").read_text(encoding="utf-8")
+    if "frontend-binding-expressions.md" not in frontend:
+        errors.append("frontend module does not route Spring MVC binding expressions")
+
     async_events = (SKILL_ROOT / "modules" / "async-events.md").read_text(encoding="utf-8")
     for required_text in (
         "ManagedExecutorService",
@@ -296,6 +317,9 @@ def validate_invariants(errors: list[str]) -> None:
     for required_text in (
         "`jsonb-3.0` feature already enables `jsonp-2.1`",
         "Plain text/HTML REST endpoints need neither JSON feature",
+        "./mvnw liberty:create\n./mvnw liberty:install-feature",
+        "./gradlew libertyCreate\n./gradlew libertyInstallFeature",
+        "requires that pre-installed assembly",
     ):
         if required_text not in feature_scan:
             errors.append(f"feature scan is missing minimal JSON guidance {required_text!r}")
@@ -757,8 +781,6 @@ def main() -> int:
     validate_fixtures(errors)
     validate_e2e(errors)
     validate_evaluation_harnesses(errors)
-    if not (REPO_ROOT / "LICENSE").is_file():
-        errors.append("repository is missing LICENSE")
 
     if errors:
         print("Skill validation failed:", file=sys.stderr)

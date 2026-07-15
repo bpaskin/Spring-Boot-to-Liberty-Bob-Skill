@@ -29,6 +29,15 @@ def run_script(name: str, *arguments: str) -> subprocess.CompletedProcess[str]:
 
 
 class ToolingTests(unittest.TestCase):
+    def test_analyzer_detects_spring_mvc_binding_expressions(self) -> None:
+        inventory = json.loads(
+            run_script("analyze_project.py", str(FIXTURES / "mvc-jpa-security")).stdout
+        )
+        frontend = next(item for item in inventory["capabilities"] if item["id"] == "frontend")
+        markers = {item["marker"] for item in frontend["evidence"]}
+        for marker in ("@ModelAttribute", "BindingResult", "@InitBinder", "th:field", "#fields"):
+            self.assertIn(marker, markers)
+
     def test_analyzer_detects_multi_module_complexity(self) -> None:
         result = run_script("analyze_project.py", str(FIXTURES / "multi-module-enterprise"))
         inventory = json.loads(result.stdout)
