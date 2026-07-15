@@ -77,7 +77,7 @@ Choose and document one binding for each repository:
 Do not treat a `databaseStore` ID as an alias for its backing datasource. The `databaseStore` owns additional table policy, including configured schema and `tablePrefix`, so the repository can target generated names that do not match a pre-existing Spring schema. If the existing database contract owns a table such as `owners`, prefer the reviewed datasource JNDI name or a persistence-unit reference and preserve explicit entity table mappings. For example:
 
 ```java
-@Repository(dataStore = "jdbc/petclinic")
+@Repository(dataStore = "jdbc/<name>")
 public interface OwnerRepository extends CrudRepository<Owner, Integer> {
 }
 ```

@@ -209,7 +209,7 @@ CWWJP0014E: Persistence unit "defaultPU" could not be configured.
 **Expected table is reported as not found:**
 - Resolve `@Repository(dataStore = "...")` to its actual datasource, persistence-unit reference, or Liberty `databaseStore`.
 - A `databaseStore` ID is not merely its datasource alias; its schema and `tablePrefix` policy can produce a name such as `WLPowners` instead of the existing `owners` table.
-- For an existing schema, bind to the reviewed datasource JNDI name (for example, `@Repository(dataStore = "jdbc/petclinic")`) or the explicit persistence-unit reference selected by the contract. Capture SQL and compare catalog/schema/table names before editing the database.
+- For an existing schema, bind to the reviewed datasource JNDI name (for example, `@Repository(dataStore = "jdbc/<name>")`) or the explicit persistence-unit reference selected by the contract. Capture SQL and compare catalog/schema/table names before editing the database.
 
 **`IllegalAccessError` names a lazy entity relationship:**
 - Inspect the complete provider stack trace and EclipseLink weaving/enhancement configuration.

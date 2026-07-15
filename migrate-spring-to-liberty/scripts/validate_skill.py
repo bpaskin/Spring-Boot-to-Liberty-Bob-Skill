@@ -247,7 +247,7 @@ def validate_invariants(errors: list[str]) -> None:
     ).read_text(encoding="utf-8")
     for required_text in (
         "tablePrefix",
-        '@Repository(dataStore = "jdbc/petclinic")',
+        '@Repository(dataStore = "jdbc/<name>")',
         "Do not treat a `databaseStore` ID as an alias",
     ):
         if required_text not in jakarta_data:
