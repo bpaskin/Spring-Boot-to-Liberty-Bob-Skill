@@ -97,7 +97,7 @@ After scope selection, perform a read-only baseline before changing files:
 Then present one **Migration Contract** containing only applicable decisions and ask for one response:
 
 - scope: complete Spring removal, an exact staged slice, or retain Spring and rehost on Liberty
-- target JDK (17, 21, or 25)
+- target JDK: always require an explicit user selection in this consolidated contract. Show the detected installed JDK and offer only supported targets from 17, 21, and 25 whose major version is less than or equal to the installed JDK. When the installed JDK is higher than 25, offer all three targets—17, 21, and 25—but never offer the newer installed major as a migration target. Do not infer the target from project files or the installed JDK, and do not supply a default. Stop before migration changes until the user selects an offered value. A previously confirmed migration contract with the user's explicit JDK answer satisfies this gate and must not be asked again.
 - exact branch name and base branch, or an explicit choice to stay on the current branch
 - view technology when server-rendered Spring MVC or Thymeleaf is present
 - datasource/environment assumptions, explicit Jakarta Data `dataStore` binding when applicable, and schema policy; default schema action to `none` and Liberty table creation/removal to disabled

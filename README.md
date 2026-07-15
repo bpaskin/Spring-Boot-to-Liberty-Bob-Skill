@@ -81,7 +81,7 @@ For rehosting, the skill verifies Spring Boot 3/4 eligibility and preserves Spri
 
 Before editing, the skill records the original build/test results, pre-existing worktree changes, application bootstrap, routes, views, datasource/schema behavior, security, external services, ports, and runtime constraints. Pre-existing failures remain separate from migration regressions.
 
-It then presents one migration contract with the applicable JDK, exact branch/base, view technology, datasource and non-destructive schema policy, security model, complex-stack routes, async/event/transaction/retry behavior, messaging and batch semantics, external integration test tier, test runtime, optional deployment track, and external-service assumptions. Confirmed choices are not asked again. `migration-report.md` becomes the durable baseline, contract, module ledger, and resume point; `migration-characterization.json` defines the positive, negative, outage, restart, and recovery evidence required from both baseline and Liberty target.
+It then presents one migration contract with a required explicit JDK selection, exact branch/base, view technology, datasource and non-destructive schema policy, security model, complex-stack routes, async/event/transaction/retry behavior, messaging and batch semantics, external integration test tier, test runtime, optional deployment track, and external-service assumptions. The JDK choices are limited to supported targets 17, 21, and 25 that are not higher than the detected installed JDK; an installed JDK newer than 25 exposes all three targets but is not itself offered as a target. The skill does not infer or default the answer. Confirmed choices are not asked again. `migration-report.md` becomes the durable baseline, contract, module ledger, and resume point; `migration-characterization.json` defines the positive, negative, outage, restart, and recovery evidence required from both baseline and Liberty target.
 
 If Git isolation is selected, the exact branch choice from the contract is created from the detected base branch. Commit, push, and draft-PR actions still require separate explicit approval.
 
@@ -93,7 +93,7 @@ Each module runs only if its gate condition is met:
 
 | Module | Gate | What it does |
 |---|---|---|
-| **jdk** | ALWAYS — stops migration if the JDK is unsupported | Enforces Java 17+ and applies the contract-selected LTS target 17, 21, or 25. |
+| **jdk** | ALWAYS — stops migration if the JDK is unsupported or the explicit target is missing/invalid | Verifies matching `java`/`javac`, requires the user to select 17, 21, or 25, rejects targets higher than installed, and offers all three when the installed JDK is newer than 25. |
 | **complexity-gate** | ALWAYS before a rewrite changes build/source files | Inventories reactive, Spring Cloud/Integration, custom starter, messaging, batch, SOAP/RPC, and non-relational stacks; blocks cleanup until each has a confirmed route. |
 | **staged-migration** | Staged scope or complex rehost-first route | Builds module/slice ownership, rehosts first when eligible, and migrates one behavior-characterized boundary at a time. |
 | **rehost-spring** | Contract selects retain Spring; Boot 3/4 and a valid bootstrap are present | Preserves Spring and adds the matching Liberty Spring Boot Support feature, plugin configuration, actual artifact deployment, and scope-aware validation. |

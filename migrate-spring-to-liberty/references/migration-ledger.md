@@ -20,7 +20,7 @@ Record before any migration edit:
 - Timestamp and project path:
 - Branch/default branch/remote:
 - Pre-existing worktree changes:
-- Build launcher and JDK:
+- Build launcher and detected `java`/`javac` JDK:
 - Compile/package command and result:
 - Test command, counts, and result:
 - Application bootstrap and expected routes:
@@ -43,7 +43,9 @@ Record the user's consolidated response verbatim enough to avoid asking again:
 ## Migration Contract
 
 - Scope and staged exclusions:
-- Target JDK:
+- Installed JDK major:
+- Allowed target JDKs (supported versions not higher than installed):
+- Explicit target JDK answer:
 - Git base and migration branch, or no branch:
 - View technology by view stack:
 - Datasource/environment assumptions:
