@@ -74,6 +74,16 @@ Choose and document one binding for each repository:
 - **Liberty `databaseStore`** when server configuration should own the datasource and table policy. Point `dataStore` to the element ID and explicitly disable table creation and removal.
 - **Datasource ID/JNDI name** only when direct datasource binding is intentional. Add `<data createTables="false" dropTables="false"/>`; otherwise Liberty's built-in provider attempts table creation by default.
 
+Do not treat a `databaseStore` ID as an alias for its backing datasource. The `databaseStore` owns additional table policy, including configured schema and `tablePrefix`, so the repository can target generated names that do not match a pre-existing Spring schema. If the existing database contract owns a table such as `owners`, prefer the reviewed datasource JNDI name or a persistence-unit reference and preserve explicit entity table mappings. For example:
+
+```java
+@Repository(dataStore = "jdbc/petclinic")
+public interface OwnerRepository extends CrudRepository<Owner, Integer> {
+}
+```
+
+During verification, enable/capture provider SQL and compare the resolved catalog, schema, and table name with the live database. A symptom such as `WLPowners table not found` is evidence to inspect `databaseStore` schema/`tablePrefix` policy and the resolved `dataStore` binding before renaming the database table.
+
 Non-destructive `databaseStore` example for the repository above:
 
 ```xml

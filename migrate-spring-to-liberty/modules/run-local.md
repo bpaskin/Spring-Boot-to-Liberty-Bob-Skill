@@ -201,6 +201,21 @@ CWWJP0014E: Persistence unit "defaultPU" could not be configured.
 - Ensure `transaction-type="JTA"` is set — Liberty manages JTA transactions; `RESOURCE_LOCAL` does not work with `@PersistenceContext` injection.
 - Add the `persistence-3.2` feature to `server.xml` (or use the `jakartaee-11.0` umbrella).
 
+**Schema is still empty after a clean startup:**
+- Find the code expected to initialize or seed it. An ordinary CDI bean can be created lazily, so its `@PostConstruct` method is not a reliable application-start event.
+- Move required startup work to an `@Observes Startup` observer, make the operation idempotent and transaction-aware, and surface failures through deployment/readiness rather than continuing with an empty schema.
+- Recheck that destructive schema creation was actually authorized; do not enable automatic creation merely to hide a missing initializer.
+
+**Expected table is reported as not found:**
+- Resolve `@Repository(dataStore = "...")` to its actual datasource, persistence-unit reference, or Liberty `databaseStore`.
+- A `databaseStore` ID is not merely its datasource alias; its schema and `tablePrefix` policy can produce a name such as `WLPowners` instead of the existing `owners` table.
+- For an existing schema, bind to the reviewed datasource JNDI name (for example, `@Repository(dataStore = "jdbc/petclinic")`) or the explicit persistence-unit reference selected by the contract. Capture SQL and compare catalog/schema/table names before editing the database.
+
+**`IllegalAccessError` names a lazy entity relationship:**
+- Inspect the complete provider stack trace and EclipseLink weaving/enhancement configuration.
+- If the affected entity class, relationship field, or accessor is `final`, remove only the modifier proven to prevent weaving or choose a supported access/fetch configuration. Do not remove `final` mechanically from unrelated domain code.
+- Clean-rebuild and test traversal of both sides of the relationship inside the intended transaction; also verify the expected behavior outside it.
+
 ---
 
 ### 5. JAX-RS application not reachable (404)
@@ -212,7 +227,8 @@ HTTP 404 Not Found on http://localhost:9080/<context-root>/api/...
 
 **Fix:**
 - Confirm `contextRoot` in `server.xml` `<webApplication>` matches the URL you are calling.
-- Confirm the JAX-RS `Application` class exists and has `@ApplicationPath("/")` (or the correct sub-path).
+- Confirm the JAX-RS `Application` class exists and has the contract-selected path, such as `@ApplicationPath("/api")`.
+- Inventory Servlet URL patterns too. `@ApplicationPath("/")` overlaps `@WebServlet("/")`, and the front Servlet can consume the JAX-RS request. Move JAX-RS to a non-overlapping path such as `/api` and update clients/tests, or narrow the Servlet mapping.
 - Look for `CWWKZ0001I: Application ... started` in the logs — if missing, the app failed to deploy (look for earlier errors).
 - Check that the resource class has `@Path` and the CDI scope annotation (`@ApplicationScoped` or `@RequestScoped`).
 - Verify the resource method has the correct HTTP method annotation (`@GET`, `@POST`, etc.) and `@Produces`/`@Consumes` annotations.
@@ -287,6 +303,21 @@ RESTEASY003175: Could not find writer for content-type application/json
 - If the app was relying on Jackson annotations (`@JsonProperty`, `@JsonIgnore`), either:
   - Replace them with JSON-B equivalents (`@JsonbProperty`, `@JsonbTransient`)
   - Or add Jackson JAX-RS provider: `com.fasterxml.jackson.jakarta.rs:jackson-jakarta-rs-json-provider` to the WAR and register a `ContextResolver<ObjectMapper>`.
+
+---
+
+### 10. Core Thymeleaf field-expression errors
+
+**Symptom:**
+```
+TemplateProcessingException while evaluating #fields.hasErrors(...)
+```
+
+**Fix:**
+- `#fields` and `th:errors` depend on the Thymeleaf-Spring integration and are unavailable after moving to core Thymeleaf.
+- Make the controller always provide an explicit `errors` map, including an empty map for the initial GET.
+- Replace a dynamic field check with `${errors.containsKey(name)}` and render its escaped message with `th:text="${errors.get(name)}"`.
+- Test valid input, each representative field error, global errors, redisplayed values, escaping, and accessibility attributes before removing the Spring dialect.
 
 ---
 

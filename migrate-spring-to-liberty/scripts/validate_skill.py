@@ -224,10 +224,56 @@ def validate_invariants(errors: list[str]) -> None:
         "Allowlist writable request DTO fields",
         "rejected over-posting",
         "Do not blindly rewrite",
+        "${errors.containsKey(name)}",
+        "th:text=\"${errors.get(name)}\"",
     ):
         if required_text not in binding_reference:
             errors.append(
                 f"frontend binding reference is missing safety text {required_text!r}"
+            )
+
+    code = (SKILL_ROOT / "modules" / "code.md").read_text(encoding="utf-8")
+    for required_text in (
+        "@Observes Startup",
+        "CDI bean creation can be lazy",
+        '@ApplicationPath("/api")',
+        '@WebServlet("/")',
+    ):
+        if required_text not in code:
+            errors.append(f"code module is missing runtime regression guidance {required_text!r}")
+
+    jakarta_data = (
+        SKILL_ROOT / "references" / "jakarta-data.md"
+    ).read_text(encoding="utf-8")
+    for required_text in (
+        "tablePrefix",
+        '@Repository(dataStore = "jdbc/petclinic")',
+        "Do not treat a `databaseStore` ID as an alias",
+    ):
+        if required_text not in jakarta_data:
+            errors.append(
+                f"Jakarta Data reference is missing datastore regression guidance {required_text!r}"
+            )
+
+    data_schema = (
+        SKILL_ROOT / "modules" / "data-xa-schema.md"
+    ).read_text(encoding="utf-8")
+    for required_text in ("IllegalAccessError", "EclipseLink weaving", "final"):
+        if required_text not in data_schema:
+            errors.append(
+                f"data/schema module is missing entity-enhancement guidance {required_text!r}"
+            )
+
+    run_local = (SKILL_ROOT / "modules" / "run-local.md").read_text(encoding="utf-8")
+    for required_text in (
+        "Schema is still empty after a clean startup",
+        "WLPowners",
+        "IllegalAccessError",
+        "Core Thymeleaf field-expression errors",
+    ):
+        if required_text not in run_local:
+            errors.append(
+                f"run-local module is missing migration regression diagnostic {required_text!r}"
             )
 
     frontend = (SKILL_ROOT / "modules" / "frontend.md").read_text(encoding="utf-8")

@@ -340,7 +340,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
 
-@Path("/api/todos")
+@Path("/todos")
 @ApplicationScoped
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -371,17 +371,19 @@ public class TodoResource {
 
 ### JAX-RS Application class
 
-Create a JAX-RS `Application` class to set the base path (equivalent to `server.servlet.context-path`):
+Create a JAX-RS `Application` class to set the API base path. Keep it distinct from any Servlet URL pattern:
 
 ```java
 import jakarta.ws.rs.ApplicationPath;
 import jakarta.ws.rs.core.Application;
 
-@ApplicationPath("/")
+@ApplicationPath("/api")
 public class RestApplication extends Application {
     // No body needed — CDI + JAX-RS auto-discovers resources
 }
 ```
+
+Inventory effective Servlet and JAX-RS mappings before choosing this path. `@ApplicationPath("/")` overlaps a front controller declared as `@WebServlet("/")`; the Servlet can consume requests before JAX-RS sees them. Prefer a non-overlapping API namespace such as `/api` and update clients/tests, or narrow the Servlet mapping when the existing public contract requires root-level REST routes. Never leave two runtimes owning the same URL pattern.
 
 ## Dependency Injection (CDI 4.1)
 
@@ -449,7 +451,9 @@ public class AppConfig {
 }
 ```
 
-### CommandLineRunner → CDI StartupEvent observer
+### CommandLineRunner → CDI Startup observer
+
+Do not move required startup work into an ordinary bean's `@PostConstruct` method. CDI bean creation can be lazy, so `@PostConstruct` runs when that bean is instantiated rather than reliably when the application starts. Observe the CDI `Startup` event when schema seeding, validation, cache warming, or another migration-required action must run during application startup:
 
 ```java
 // BEFORE: Spring CommandLineRunner
@@ -476,11 +480,13 @@ public class StartupObserver {
 }
 ```
 
+Make startup work idempotent and transaction-aware. A required initialization failure must fail deployment/readiness visibly; do not log and continue with an empty or partially initialized schema. Keep destructive schema actions behind the migration's explicit authorization gate.
+
 ## Watch out
 
 - **Namespace conversion**: Convert only APIs that moved from Java/Jakarta EE to the `jakarta.*` namespace. Preserve Java SE and third-party packages such as `javax.sql`, `javax.naming`, `javax.crypto`, and `javax.cache`.
 - **`@Transactional`**: Use `jakarta.transaction.Transactional`, NOT `org.springframework.transaction.annotation.Transactional`.
 - **No component scanning**: CDI discovers beans in the same archive via `beans.xml` or by default if the archive is a bean archive (JAR/WAR with CDI 4.0+ implicit discovery). Add `src/main/resources/META-INF/beans.xml` with `bean-discovery-mode="all"` if beans are not discovered.
 - **No Open Session in View**: Liberty/JPA does not keep the persistence context open across the entire HTTP request by default. Lazy-loaded associations must be fetched within a `@Transactional` boundary.
-- **JAX-RS path conflicts**: Unlike Spring, JAX-RS does not allow overlapping `@Path` values. Check for duplicate paths.
+- **HTTP path conflicts**: Check both duplicate JAX-RS `@Path` values and cross-runtime ownership. In particular, do not combine `@ApplicationPath("/")` with `@WebServlet("/")`; give JAX-RS a non-overlapping base such as `/api` or narrow the Servlet mapping.
 - **JSON serialization**: Liberty uses JSON-B 3.0 by default (not Jackson). If the app relies on Jackson-specific annotations (`@JsonProperty`, `@JsonIgnore`), add `jackson-jakarta-rs-json-provider` or configure a JAX-RS `ContextResolver<ObjectMapper>`.

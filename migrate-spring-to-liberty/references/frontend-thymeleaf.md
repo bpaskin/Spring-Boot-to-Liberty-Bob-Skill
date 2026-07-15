@@ -58,6 +58,8 @@ Inventory and replace every Spring-only expression/dialect before removing depen
 
 Do not claim complete Spring removal while any Spring dialect remains.
 
+In particular, core Thymeleaf does not provide Spring's `#fields` utility. Build an explicit field-error map in the controller, include an empty map on the initial GET, replace checks with `${errors.containsKey(name)}`, and render the corresponding escaped message with `th:text="${errors.get(name)}"`. Remove the associated `th:errors`/`th:errorclass` expressions and test field plus global validation failures before removing `thymeleaf-spring*`.
+
 ## Security and verification
 
 Core Thymeleaf does not recreate Spring Security CSRF integration. Implement an explicit synchronizer-token or equivalent application/container filter for cookie-authenticated browser flows. Generate the token, bind it to the user session, render it, validate it before state change, and rotate it according to the selected design.
