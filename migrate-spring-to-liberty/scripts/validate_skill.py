@@ -32,6 +32,8 @@ INVALID_TEXT = {
     "@LookupIfProperty": "not a portable CDI or MicroProfile annotation",
     "MicroProfile Scheduler (`mpScheduler`)": "there is no mpScheduler feature",
     "Jakarta EE 11 mandates Java 21": "Jakarta EE 11 has a Java 17 minimum",
+    "propose **21** in the consolidated contract": "the target JDK must be explicitly selected",
+    "default to 21 when the project has no documented runtime policy": "the target JDK must not be defaulted",
     "have no direct Jakarta EE equivalent": "Jakarta EE 11 includes Jakarta Data 1.0",
     "Remove Spring CSRF tokens from HTML and JavaScript": "replace and test CSRF protection first",
     "LibertyServerContainerConfiguration": "MicroShed documents SharedContainerConfiguration with ApplicationContainer",
@@ -197,6 +199,32 @@ def validate_invariants(errors: list[str]) -> None:
     ):
         if required_text not in skill_text:
             errors.append(f"SKILL.md is missing complex-migration routing {required_text!r}")
+
+    for required_text in (
+        "always require an explicit user selection",
+        "less than or equal to the installed JDK",
+        "When the installed JDK is higher than 25",
+        "do not supply a default",
+        "must not be asked again",
+    ):
+        if required_text not in skill_text:
+            errors.append(
+                f"SKILL.md is missing mandatory JDK selection guidance {required_text!r}"
+            )
+
+    jdk = (SKILL_ROOT / "modules" / "jdk.md").read_text(encoding="utf-8")
+    for required_text in (
+        "javac -version",
+        "ALLOWED_JAVA_VERSIONS",
+        "The target cannot be higher than the installed JDK",
+        "Never infer or default `JAVA_VERSION`",
+        "| 21 | 17, 21 |",
+        "| 25 | 17, 21, 25 |",
+        "| Greater than 25 | 17, 21, 25 |",
+        "migration targets remain capped at 17, 21, and 25",
+    ):
+        if required_text not in jdk:
+            errors.append(f"JDK module is missing selection guard {required_text!r}")
 
     security = (SKILL_ROOT / "modules" / "security.md").read_text(encoding="utf-8")
     for required_text in (
