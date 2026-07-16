@@ -35,8 +35,42 @@ class ToolingTests(unittest.TestCase):
         )
         frontend = next(item for item in inventory["capabilities"] if item["id"] == "frontend")
         markers = {item["marker"] for item in frontend["evidence"]}
-        for marker in ("@ModelAttribute", "BindingResult", "@InitBinder", "th:field", "#fields"):
+        for marker in (
+            "@ModelAttribute",
+            "BindingResult",
+            "@InitBinder",
+            "th:field",
+            "#fields",
+            "webjars",
+            "resolveLocale",
+            "#{",
+        ):
             self.assertIn(marker, markers)
+
+    def test_characterization_includes_frontend_asset_layout_and_locale_cases(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            inventory_path = Path(directory) / "inventory.json"
+            run_script(
+                "analyze_project.py",
+                str(FIXTURES / "mvc-jpa-security"),
+                "--output",
+                str(inventory_path),
+            )
+            result = json.loads(
+                run_script(
+                    "generate_characterization.py",
+                    "--inventory",
+                    str(inventory_path),
+                ).stdout
+            )
+            cases = {item["id"] for item in result["cases"]}
+            for case in (
+                "frontend-asset-graph",
+                "frontend-layout-parity",
+                "frontend-locale-switch",
+                "frontend-locale-session",
+            ):
+                self.assertIn(case, cases)
 
     def test_analyzer_detects_multi_module_complexity(self) -> None:
         result = run_script("analyze_project.py", str(FIXTURES / "multi-module-enterprise"))

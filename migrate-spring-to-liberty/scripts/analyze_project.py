@@ -24,6 +24,7 @@ IGNORED_PARTS = {
 }
 TEXT_SUFFIXES = {
     ".conf",
+    ".css",
     ".gradle",
     ".graphql",
     ".groovy",
@@ -31,11 +32,14 @@ TEXT_SUFFIXES = {
     ".java",
     ".jsp",
     ".json",
+    ".js",
     ".kt",
     ".kts",
+    ".mjs",
     ".properties",
     ".proto",
     ".sql",
+    ".svg",
     ".toml",
     ".txt",
     ".wsdl",
@@ -100,6 +104,15 @@ CAPABILITIES = (
             "<form:form",
             "<form:input",
             "<spring:bind",
+            "src/main/resources/static",
+            "src/main/webapp",
+            "webjars",
+            "th:href",
+            "th:src",
+            "MessageResolver",
+            "resolveLocale",
+            "LocaleResolver",
+            "#{",
         ),
     ),
     CapabilityDefinition(
@@ -287,7 +300,7 @@ def evidence_for(root: Path, files: list[Path], markers: tuple[str, ...]) -> lis
     evidence: list[dict[str, str]] = []
     for path in files:
         text = read_text(path)
-        searchable = f"{path.name}\n{text}"
+        searchable = f"{path.relative_to(root).as_posix()}\n{text}"
         for marker in markers:
             if marker.lower() in searchable.lower():
                 evidence.append({"path": path.relative_to(root).as_posix(), "marker": marker})

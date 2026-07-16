@@ -308,6 +308,45 @@ def validate_invariants(errors: list[str]) -> None:
     frontend = (SKILL_ROOT / "modules" / "frontend.md").read_text(encoding="utf-8")
     if "frontend-binding-expressions.md" not in frontend:
         errors.append("frontend module does not route Spring MVC binding expressions")
+    for required_text in (
+        "frontend-assets-layout-i18n.md",
+        "META-INF/resources/webjars/<artifact>/<version>/...",
+        "transitive static-asset graph",
+        "same session",
+    ):
+        if required_text not in frontend:
+            errors.append(
+                f"frontend module is missing asset/layout/i18n guidance {required_text!r}"
+            )
+
+    frontend_parity = (
+        SKILL_ROOT / "references" / "frontend-assets-layout-i18n.md"
+    ).read_text(encoding="utf-8")
+    for required_text in (
+        "META-INF/resources/webjars/font-awesome/4.7.0/css/font-awesome.min.css",
+        "do not copy that example version",
+        "Do not stop after the top-level CSS returns `200`",
+        "ClasspathResourceBundleMessageResolver",
+        "WebConfiguration.resolveLocale()",
+        "Startseite",
+        "same session",
+        "browser console/network failures",
+    ):
+        if required_text not in frontend_parity:
+            errors.append(
+                f"frontend parity reference is missing regression guidance {required_text!r}"
+            )
+
+    for required_text in (
+        "Missing styles, icons, images, or fonts",
+        "Locale switching or messages do not persist",
+        "versionless `/webjars/...`",
+        "German `Startseite`",
+    ):
+        if required_text not in run_local:
+            errors.append(
+                f"run-local module is missing frontend diagnostic {required_text!r}"
+            )
 
     async_events = (SKILL_ROOT / "modules" / "async-events.md").read_text(encoding="utf-8")
     for required_text in (

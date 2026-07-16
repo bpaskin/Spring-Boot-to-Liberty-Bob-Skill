@@ -321,6 +321,30 @@ TemplateProcessingException while evaluating #fields.hasErrors(...)
 
 ---
 
+### 11. Missing styles, icons, images, or fonts
+
+**Symptom:** the HTML renders, but the page is unstyled, icons are blank, or a versionless `/webjars/...` request returns `404`.
+
+**Fix:**
+- Inspect the resolved dependency and WAR to find the actual `META-INF/resources/webjars/<artifact>/<version>/...` entry.
+- Do not assume Spring Boot's WebJars locator/resource handler exists on Liberty. Replace versionless links with context-relative URLs containing the resolved version, or deliberately retain/configure a compatible locator and test it.
+- Crawl the stylesheet's `@import` and `url(...)` dependencies. Require successful CSS, JavaScript, image, SVG, and font responses with compatible MIME types and non-HTML bodies.
+- Check browser network and console output, CSP, CSS order, layout fragments, icon glyphs, image dimensions, and representative responsive layouts before marking the fix complete.
+
+---
+
+### 12. Locale switching or messages do not persist
+
+**Symptom:** `#{...}` renders as a missing placeholder, the default language is always used, or the selected locale disappears on the next request.
+
+**Fix:**
+- Register the contract-selected Thymeleaf `IMessageResolver`, including an application-provided `ClasspathResourceBundleMessageResolver`, with the `TemplateEngine`; verify bundle basenames, UTF-8 encoding, fallback, and packaged files.
+- Pass the locale returned by application logic such as `WebConfiguration.resolveLocale()` into the Thymeleaf `WebContext`. Preserve its query/cookie/session/`Accept-Language` precedence.
+- Select a non-default locale, assert a known translation such as German `Startseite` when present, then make another request in the same session without a locale parameter and verify it remains selected.
+- Verify a new session uses the documented default and test unsupported locales, missing keys, message parameters, localized validation, dates/numbers, and layout wrapping.
+
+---
+
 ## Enabling Trace Logging for Deeper Diagnostics
 
 If errors are unclear, enable detailed tracing in `server.xml` for specific packages:
