@@ -52,6 +52,7 @@ Load the relevant reference file when working on a module:
 | [references/frontend-thymeleaf.md](references/frontend-thymeleaf.md) | Frontend module only when the contract retains core Thymeleaf |
 | [references/frontend-jsp-rest.md](references/frontend-jsp-rest.md) | Frontend module for REST-only or confirmed JSP/static paths |
 | [references/frontend-binding-expressions.md](references/frontend-binding-expressions.md) | Frontend module when Spring MVC controller binding, Spring form tags, or Thymeleaf Spring field/error expressions are present |
+| [references/frontend-assets-layout-i18n.md](references/frontend-assets-layout-i18n.md) | Frontend module when templates, layouts, static assets, WebJars, message bundles, or locale switching are present |
 
 
 ## Step 1: Analyze & Choose Scope

@@ -38,6 +38,10 @@ CAPABILITY_CASES = {
     ),
     "frontend": (
         ("view-rendering", "positive", "Render each supported view with the expected model and static assets."),
+        ("frontend-asset-graph", "positive", "Crawl rendered HTML and CSS dependencies; load scripts, styles, images, SVGs, fonts, icons, and WebJars without HTTP, MIME, CSP, or console failures."),
+        ("frontend-layout-parity", "positive", "Compare representative routes, states, viewports, and locales for layout, wrapping, overflow, formatting, and interactive behavior."),
+        ("frontend-locale-switch", "positive", "Render every supported locale and assert representative translated messages, formatting, validation, and localized fragments."),
+        ("frontend-locale-session", "recovery", "Switch locale, verify it persists on a same-session request without the selector, then verify a new session follows the documented default."),
         ("view-csrf-rejection", "failure", "Reject a state-changing browser request without the contracted CSRF proof."),
     ),
     "repositories": (

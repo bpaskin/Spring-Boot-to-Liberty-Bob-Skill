@@ -209,7 +209,7 @@ The skill uses canonical mapping references plus conditionally loaded frontend a
 | [`modules/reactive-cloud.md`](migrate-spring-to-liberty/modules/reactive-cloud.md) | Reactive pipelines, Spring Cloud, custom starters, and runtime extensions |
 | [`modules/soap-nonrelational.md`](migrate-spring-to-liberty/modules/soap-nonrelational.md) | SOAP/RPC, caches, and non-relational clients/providers |
 | [`modules/security.md`](migrate-spring-to-liberty/modules/security.md) | Dedicated security gate for authentication, authorization, OAuth2/OIDC/JWT, registries, sessions/logout, CORS/CSRF, trust, and negative tests |
-| [`modules/frontend.md`](migrate-spring-to-liberty/modules/frontend.md) | View-layer scenario router, static assets, and verified CSRF replacement |
+| [`modules/frontend.md`](migrate-spring-to-liberty/modules/frontend.md) | View-layer scenario router; transitive asset/WebJar, layout, locale/message parity; and verified CSRF replacement |
 | [`modules/testing.md`](migrate-spring-to-liberty/modules/testing.md) | Jakarta-compatible MicroShed integration tests, JUnit 5, Mockito, and optional REST Assured |
 | [`modules/cleanup.md`](migrate-spring-to-liberty/modules/cleanup.md) | Leftover Spring imports, selective Jakarta namespace conversion, and CDI discovery |
 | [`modules/feature-scan.md`](migrate-spring-to-liberty/modules/feature-scan.md) | Minimal `<featureManager>` derivation and `server.xml` update |

@@ -4,6 +4,8 @@ Load this reference only when the migration contract explicitly retains Thymelea
 
 Apply the shared [binding-expression contract](frontend-binding-expressions.md) when Spring MVC or the Thymeleaf Spring dialect owns form population, conversion, validation, or error rendering.
 
+Apply the shared [asset, layout, and internationalization contract](frontend-assets-layout-i18n.md) when templates reference layouts, static files, WebJars, message bundles, or locale state.
+
 ## Contents
 
 - [Dependencies](#dependencies)
@@ -36,6 +38,8 @@ public class ThymeleafConfig {
 
 Use the actual Thymeleaf Jakarta web integration API selected by the pinned version; verify the example compiles instead of guessing package names.
 
+Register the selected `IMessageResolver` explicitly. Core Thymeleaf otherwise uses its standard template-adjacent message resolution, not Spring's `MessageSource` integration. When the application supplies a custom `ClasspathResourceBundleMessageResolver`, preserve its basenames, encoding, fallback, and cache behavior and attach it to the `TemplateEngine`.
+
 ## Controller path
 
 Replace Spring MVC controllers with either:
@@ -44,6 +48,8 @@ Replace Spring MVC controllers with either:
 - a Jakarta REST/Servlet bridge whose ownership, response buffering, status codes, and redirects are explicit.
 
 Prefer a Servlet for server-rendered form workflows. Preserve routes, request encoding, model names, form binding, validation errors, redirect semantics, locale, and exception behavior. Use CDI `@Inject` for services.
+
+Construct each `WebContext` with the application-resolved locale. If `WebConfiguration.resolveLocale()` persists the choice in the HTTP session, pass that result to Thymeleaf on the switching request and subsequent same-session requests.
 
 ## Spring-specific features
 
@@ -60,8 +66,10 @@ Do not claim complete Spring removal while any Spring dialect remains.
 
 In particular, core Thymeleaf does not provide Spring's `#fields` utility. Build an explicit field-error map in the controller, include an empty map on the initial GET, replace checks with `${errors.containsKey(name)}`, and render the corresponding escaped message with `th:text="${errors.get(name)}"`. Remove the associated `th:errors`/`th:errorclass` expressions and test field plus global validation failures before removing `thymeleaf-spring*`.
 
+Do not retain versionless WebJar paths merely because they worked under Spring Boot. Inspect the packaged dependency and use the actual versioned Servlet resource path, or deliberately configure and test a retained locator. Keep asset links context-relative.
+
 ## Security and verification
 
 Core Thymeleaf does not recreate Spring Security CSRF integration. Implement an explicit synchronizer-token or equivalent application/container filter for cookie-authenticated browser flows. Generate the token, bind it to the user session, render it, validate it before state change, and rotate it according to the selected design.
 
-Test valid, missing, and invalid tokens; anonymous and forbidden access; escaping; form validation; redirect; and representative static assets. Confirm no `org.thymeleaf.spring*`, `sec:*`, `_csrf`, or Spring expression objects remain unless the staged contract documents them.
+Test valid, missing, and invalid tokens; anonymous and forbidden access; escaping; form validation; redirect; the transitive asset graph; layout at representative viewports/states; every supported locale; and same-session locale persistence. Confirm no `org.thymeleaf.spring*`, `sec:*`, `_csrf`, or Spring expression objects remain unless the staged contract documents them.
